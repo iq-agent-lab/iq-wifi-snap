@@ -25,6 +25,8 @@ import { shareToKakao, looksLikeKakaoKey } from './lib/kakao.js';
 import { prepareOcr, runOcr, isOcrReady } from './lib/ocr.js';
 import { parseFromText } from './lib/parser.js';
 import { env, canDeepLinkOutOfInApp, openInExternalBrowser } from './lib/env.js';
+import { measureSpeed, speedTier, speedTierLabel } from './lib/speedtest.js';
+import { renderMap } from './lib/map.js';
 
 // ============ helpers ============
 const $ = (id) => document.getElementById(id);
@@ -387,6 +389,7 @@ function renderResult(r) {
   $('btn-regen-qr').hidden = true;
 
   updateKakaoButtonVisibility();
+  resetSpeedUi(r);
   renderQRAndCommands(r);
 }
 
@@ -555,6 +558,91 @@ function handleDownloadQR() {
   }
 }
 
+// ============ speed test ============
+
+const STAGE_LABEL = {
+  latency: '지연시간 측정 중...',
+  warmup: '워밍업 중...',
+  measuring: '다운로드 속도 측정 중',
+};
+
+async function handleMeasureSpeed() {
+  const btn = $('btn-measure-speed');
+  btn.disabled = true;
+
+  $('speed-result').hidden = true;
+  $('speed-error').hidden = true;
+  $('speed-progress').hidden = false;
+  $('speed-stage-text').textContent = '시작...';
+
+  try {
+    const r = await measureSpeed((m) => {
+      const base = STAGE_LABEL[m.stage] || m.stage;
+      const pct = m.progress ? ` ${Math.round(m.progress * 100)}%` : '';
+      $('speed-stage-text').textContent = base + pct;
+    });
+
+    $('speed-progress').hidden = true;
+    $('speed-result').hidden = false;
+    $('speed-down').textContent = r.downloadMbps.toFixed(1);
+    $('speed-lat').textContent = r.latencyMs;
+
+    const tier = speedTier(r.downloadMbps);
+    $('speed-tier').textContent = speedTierLabel(tier);
+    // 카드 색상
+    const allCards = document.querySelectorAll('.speed-card');
+    allCards.forEach((c) =>
+      c.classList.remove('tier-excellent', 'tier-good', 'tier-ok', 'tier-slow')
+    );
+    allCards.forEach((c) => c.classList.add(`tier-${tier}`));
+
+    // 기록에 저장
+    if (currentResultTs) {
+      storage.updateHistory(currentResultTs, {
+        speedMbps: r.downloadMbps,
+        latencyMs: r.latencyMs,
+        speedAt: Date.now(),
+      });
+      if (currentResult) {
+        currentResult.speedMbps = r.downloadMbps;
+        currentResult.latencyMs = r.latencyMs;
+      }
+      $('speed-saved-note').textContent = '기록에 저장됨';
+    } else {
+      $('speed-saved-note').textContent =
+        '공유받은 항목이라 저장은 안 됩니다.';
+    }
+  } catch (e) {
+    $('speed-progress').hidden = true;
+    $('speed-error').hidden = false;
+    $('speed-error-msg').textContent = e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function resetSpeedUi(r) {
+  // 결과 화면 새로 그릴 때 호출 — 기존 속도 데이터 있으면 표시, 없으면 초기화
+  $('speed-progress').hidden = true;
+  $('speed-error').hidden = true;
+  if (r && r.speedMbps) {
+    $('speed-result').hidden = false;
+    $('speed-down').textContent = r.speedMbps.toFixed(1);
+    $('speed-lat').textContent = r.latencyMs || '-';
+    const tier = speedTier(r.speedMbps);
+    $('speed-tier').textContent = speedTierLabel(tier);
+    document
+      .querySelectorAll('.speed-card')
+      .forEach((c) => {
+        c.classList.remove('tier-excellent', 'tier-good', 'tier-ok', 'tier-slow');
+        c.classList.add(`tier-${tier}`);
+      });
+    $('speed-saved-note').textContent = '기록에 저장됨';
+  } else {
+    $('speed-result').hidden = true;
+  }
+}
+
 // ============ nearby ============
 async function refreshNearby() {
   const section = $('nearby-section');
@@ -604,6 +692,36 @@ async function refreshNearby() {
   }
 }
 
+// ============ map ============
+async function showMapView() {
+  const empty = $('map-empty');
+  const stats = $('map-stats');
+  const canvas = $('map-canvas');
+
+  const all = storage.getHistory();
+  const withLoc = all.filter((e) => e.location);
+
+  if (withLoc.length === 0) {
+    empty.hidden = false;
+    canvas.style.display = 'none';
+    stats.hidden = true;
+    return;
+  }
+
+  empty.hidden = true;
+  canvas.style.display = '';
+
+  try {
+    const r = await renderMap('map-canvas', all);
+    stats.hidden = false;
+    const speedCount = withLoc.filter((e) => e.speedMbps).length;
+    stats.textContent = `핀 ${r.markerCount}개 · 속도 측정된 곳 ${speedCount}곳`;
+  } catch (e) {
+    canvas.innerHTML = `<p style="padding:2rem;text-align:center;color:var(--muted)">지도 로딩 실패: ${escapeHtml(e.message)}</p>`;
+    stats.hidden = true;
+  }
+}
+
 // ============ history ============
 function renderHistory() {
   const list = storage.getHistory();
@@ -619,12 +737,16 @@ function renderHistory() {
   clearBtn.hidden = false;
 
   wrap.innerHTML = list
-    .map(
-      (e) => `
+    .map((e) => {
+      const tier = e.speedMbps ? speedTier(e.speedMbps) : null;
+      const speedBadge = tier
+        ? `<span class="h-speed tier-${tier}">${e.speedMbps.toFixed(0)} Mbps</span>`
+        : '';
+      return `
     <div class="history-item">
       <div class="h-info">
         ${e.label ? `<div class="h-label">${escapeHtml(e.label)}</div>` : ''}
-        <div class="h-ssid">${escapeHtml(e.ssid)}</div>
+        <div class="h-ssid">${escapeHtml(e.ssid)}${speedBadge}</div>
         <div class="h-pass">${escapeHtml(e.password || '(없음)')}</div>
         <div class="h-meta">
           ${new Date(e.ts).toLocaleString('ko-KR')}
@@ -638,8 +760,8 @@ function renderHistory() {
         <button data-action="delete" data-ts="${e.ts}">삭제</button>
       </div>
     </div>
-  `
-    )
+  `;
+    })
     .join('');
 }
 
@@ -655,6 +777,8 @@ function reuseEntry(ts) {
     notes: '기록에서 복원',
     location: item.location,
     label: item.label,
+    speedMbps: item.speedMbps,
+    latencyMs: item.latencyMs,
     _shared: false,
   });
   showView('result');
@@ -854,6 +978,7 @@ function init() {
       if (target === 'history') renderHistory();
       if (target === 'home') refreshNearby();
       if (target === 'settings') updateCameraStatus();
+      if (target === 'map') showMapView();
       showView(target);
       stopCamera();
       $('camera-section').hidden = true;
@@ -895,6 +1020,9 @@ function init() {
   $('btn-share-kakao').addEventListener('click', handleShareKakao);
   $('btn-share-link').addEventListener('click', handleCopyShareLink);
   $('btn-download-qr').addEventListener('click', handleDownloadQR);
+
+  // ----- speed test -----
+  $('btn-measure-speed').addEventListener('click', handleMeasureSpeed);
 
   // ----- label -----
   $('label-input').addEventListener('keydown', (e) => {

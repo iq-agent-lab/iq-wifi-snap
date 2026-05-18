@@ -58,6 +58,7 @@
   <nav class="nav">
     <button data-nav="home">홈</button>
     <button data-nav="history">기록</button>
+    <button data-nav="map">지도</button>
     <button data-nav="settings">설정</button>
   </nav>
 </header>
@@ -212,6 +213,49 @@
       </p>
     </div>
 
+    <!-- 속도 측정 -->
+    <div class="speed-section">
+      <div class="speed-head">
+        <strong>📶 속도 측정</strong>
+        <button id="btn-measure-speed">지금 측정</button>
+      </div>
+      <p class="muted small speed-hint">
+        이 와이파이에 연결된 상태에서 측정해주세요. 약 6-10초.
+      </p>
+
+      <div id="speed-progress" hidden class="speed-progress">
+        <span class="spin"></span>
+        <span id="speed-stage-text">측정 준비 중...</span>
+      </div>
+
+      <div id="speed-result" hidden class="speed-result">
+        <div class="speed-cards">
+          <div class="speed-card">
+            <div class="speed-card-val" id="speed-down">-</div>
+            <div class="speed-card-unit">Mbps</div>
+            <div class="speed-card-label">다운로드</div>
+          </div>
+          <div class="speed-card">
+            <div class="speed-card-val" id="speed-lat">-</div>
+            <div class="speed-card-unit">ms</div>
+            <div class="speed-card-label">지연시간</div>
+          </div>
+          <div class="speed-card">
+            <div class="speed-card-val" id="speed-tier">-</div>
+            <div class="speed-card-label">평가</div>
+          </div>
+        </div>
+        <p class="muted small speed-meta">
+          <span id="speed-saved-note">기록에 저장됨</span>
+        </p>
+      </div>
+
+      <div id="speed-error" hidden class="speed-error small">
+        <strong>측정 실패</strong>
+        <p id="speed-error-msg"></p>
+      </div>
+    </div>
+
     <details open class="cmd-block">
       <summary><span class="os-icon">⌘</span> macOS</summary>
       <pre id="cmd-macos" class="mono"></pre>
@@ -290,6 +334,26 @@
   <p class="muted small">이 브라우저에 최근 50개까지 저장됩니다.</p>
   <div id="history-list"></div>
   <button id="btn-clear-history" class="ghost danger" hidden>전체 삭제</button>
+</section>
+
+<!-- ============== MAP ============== -->
+<section data-view="map" hidden>
+  <h2>지도</h2>
+  <p class="muted small">기록된 위치별 와이파이. 핀을 탭하면 SSID/속도 정보가 떠요.</p>
+
+  <div id="map-empty" hidden class="banner banner-info" style="margin-top:1rem">
+    <div class="banner-head">
+      <span class="banner-icon">📍</span>
+      <strong>아직 표시할 위치가 없어요</strong>
+    </div>
+    <p>설정에서 "위치 기억"을 켜고 새 카페에서 추출하면 여기에 핀이 찍힙니다.</p>
+    <div class="banner-actions">
+      <button data-nav="settings" class="primary">설정으로</button>
+    </div>
+  </div>
+
+  <div id="map-canvas"></div>
+  <p class="muted small map-footnote" id="map-stats" hidden></p>
 </section>
 
 <!-- ============== SETTINGS ============== -->
@@ -396,7 +460,7 @@
 </main>
 
 <footer>
-  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.9.0</span></span>
+  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.10.0</span></span>
 </footer>
 
 <!-- ============== CUSTOM CONFIRM MODAL ============== -->

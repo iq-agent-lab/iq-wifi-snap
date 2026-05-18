@@ -1,5 +1,5 @@
 /* =====================================================
-   Wifi Snap · clean minimal · coral accent · v0.9
+   Wifi Snap · clean minimal · coral accent · v0.10
    ===================================================== */
 
 :root {
@@ -891,6 +891,126 @@ a:hover { border-bottom-color: var(--accent); }
   background: #952f1a;
   border-color: #952f1a;
   color: white;
+}
+
+/* ===== Speed test (v0.10) ===== */
+.speed-section {
+  margin: 0 0 1.75rem;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.speed-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.speed-head strong { font-size: 0.95rem; }
+.speed-head button {
+  font-size: 0.82rem;
+  padding: 0.45rem 0.85rem;
+}
+.speed-hint { margin: 0; }
+.speed-progress {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.speed-result { margin-top: 1rem; }
+.speed-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+}
+.speed-card {
+  text-align: center;
+  padding: 0.65rem 0.4rem;
+  background: var(--bg);
+  border-radius: var(--radius);
+}
+.speed-card-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.speed-card-unit {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 0.1rem;
+}
+.speed-card-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.speed-card.tier-excellent .speed-card-val { color: #2d7a3e; }
+.speed-card.tier-good      .speed-card-val { color: #3a7a5c; }
+.speed-card.tier-ok        .speed-card-val { color: #b8860b; }
+.speed-card.tier-slow      .speed-card-val { color: #b3361e; }
+
+.speed-meta {
+  text-align: center;
+  margin-top: 0.5rem !important;
+}
+.speed-error {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  background: #fce8e3;
+  border: 1px solid #f0c7ba;
+  border-radius: var(--radius);
+  color: var(--error);
+}
+.speed-error strong { display: block; margin-bottom: 0.25rem; }
+.speed-error p { margin: 0; color: var(--fg); word-break: break-word; }
+
+/* ===== History speed badge ===== */
+.h-speed {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.1em 0.45em;
+  border-radius: 3px;
+  margin-left: 0.4rem;
+  letter-spacing: -0.02em;
+}
+.h-speed.tier-excellent { background: #d8edda; color: #1e5a2a; }
+.h-speed.tier-good      { background: #dbe9e0; color: #2a5a3e; }
+.h-speed.tier-ok        { background: #fdf6e3; color: #856104; }
+.h-speed.tier-slow      { background: #fce8e3; color: #8a2616; }
+
+/* ===== Map ===== */
+#map-canvas {
+  width: 100%;
+  height: 520px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  margin-top: 1rem;
+  background: var(--surface);
+}
+.map-footnote {
+  text-align: center;
+  margin-top: 0.75rem;
+}
+/* Leaflet overrides */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px !important;
+}
+.leaflet-popup-content {
+  margin: 0.7rem 0.9rem !important;
 }
 
 /* ===== Mobile ===== */

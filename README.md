@@ -139,6 +139,8 @@ iq-wifi-snap/
     ├── ocr.js          Tesseract.js 동적 로딩 + 워커 관리
     ├── parser.js       OCR 텍스트 → SSID/PW 로컬 파서
     ├── env.js          브라우저/인앱/플랫폼 환경 감지
+    ├── speedtest.js    Cloudflare speed test (다운로드/지연시간)
+    ├── map.js          Leaflet + OpenStreetMap 지도 렌더
     └── storage.js      localStorage 래퍼
 ```
 
@@ -227,8 +229,8 @@ wifi-snap connect "Starbucks" "passw0rd"
 - [x] **v0.6** — 온디바이스 OCR 폴백 (Tesseract.js + 로컬 파서)
 - [x] **v0.7** — 사용성 정리. 인앱 브라우저 감지+안내, 위치 권한 흐름 개선
 - [x] **v0.8** — 데스크톱 컴패니언 CLI. macOS/Linux/Windows에 한 줄 설치
-- [x] **v0.9** — 아이콘 재디자인(레퍼런스 앱 스타일), favicon 사이즈 확장, CLI 부트스트랩 정직 안내, 완전 오프라인 대안 방법 가이드
-- [ ] v0.10 — 자동 속도 측정, 카페별 평균 속도 지도
+- [x] **v0.9** — 아이콘 재디자인(레퍼런스 앱 스타일), favicon 사이즈 확장, CLI 부트스트랩 정직 안내
+- [x] **v0.10** — 자동 속도 측정 (Cloudflare speed test) + 카페별 지도 (Leaflet + OpenStreetMap). 다운로드/지연 측정, 등급별 색상 뱃지, 지도 핀에 SSID·속도 팝업.
 - [ ] v0.11 — wifi-snap:// 커스텀 URL 스킴 (클릭만으로 CLI 실행)
 - [ ] v0.12 — 초음파 오디오 전송 (ggwave, 진정한 연결 없는 폰→PC 전송)
 
