@@ -1,5 +1,5 @@
 /* =====================================================
-   Wifi Snap · clean minimal · coral accent · v0.7
+   Wifi Snap · clean minimal · coral accent · v0.8
    ===================================================== */
 
 :root {
@@ -597,6 +597,27 @@ code {
   padding: 0.1em 0.35em;
   background: var(--line);
   border-radius: 3px;
+}
+
+/* CLI block - taller, multiple steps */
+.cli-block .cmd-foot p {
+  margin-bottom: 0.4rem;
+}
+.cli-step {
+  margin-top: 1rem !important;
+  font-size: 0.9rem;
+}
+.cli-step:first-of-type {
+  margin-top: 0.5rem !important;
+}
+.cli-block pre {
+  margin-bottom: 0.3rem;
+}
+.cli-note {
+  margin-top: 1rem !important;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--line);
+  line-height: 1.6 !important;
 }
 
 /* ===== Headings ===== */

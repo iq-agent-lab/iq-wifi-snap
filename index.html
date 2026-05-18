@@ -229,6 +229,34 @@
       </div>
     </details>
 
+    <details class="cmd-block cli-block">
+      <summary><span class="os-icon">💻</span> 데스크톱 CLI (한 줄 연결)</summary>
+      <div class="cmd-foot">
+        <p class="muted small">
+          PC에 <code>wifi-snap</code> CLI를 한 번 설치하면, 다음부턴 공유 URL 하나로 즉시 연결됩니다.
+          (폰에서 본인 카톡으로 URL 보낸 뒤 PC에서 붙여넣는 흐름)
+        </p>
+
+        <p class="cli-step"><strong>1. PC에 한 번 설치 (macOS / Linux)</strong></p>
+        <pre id="cli-install-bash" class="mono"></pre>
+        <button data-copy="cli-install-bash">설치 명령 복사</button>
+
+        <p class="cli-step"><strong>1. PC에 한 번 설치 (Windows PowerShell)</strong></p>
+        <pre id="cli-install-ps" class="mono"></pre>
+        <button data-copy="cli-install-ps">설치 명령 복사</button>
+
+        <p class="cli-step"><strong>2. 이 와이파이 적용</strong></p>
+        <pre id="cli-use" class="mono"></pre>
+        <button data-copy="cli-use">실행 명령 복사</button>
+
+        <p class="muted small cli-note">
+          ※ <code>wifi-snap</code> CLI는 외부 서버 호출 없음. URL 안의 SSID/PW만 디코드해서
+          OS별 와이파이 연결 명령(<code>networksetup</code> / <code>netsh</code> / <code>nmcli</code>)으로 변환합니다.
+          자세한 사용법: <a href="https://github.com/iq-agent-lab/iq-wifi-snap/tree/main/cli" target="_blank" rel="noopener">cli/README</a>
+        </p>
+      </div>
+    </details>
+
     <button data-nav="home" class="ghost">← 처음으로</button>
   </div>
 </section>
@@ -345,7 +373,7 @@
 </main>
 
 <footer>
-  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.7.0</span></span>
+  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.8.0</span></span>
 </footer>
 
 <!-- ============== CUSTOM CONFIRM MODAL ============== -->

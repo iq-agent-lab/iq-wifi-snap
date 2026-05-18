@@ -124,9 +124,12 @@ iq-wifi-snap/
 ├── sw.js               서비스 워커
 ├── icons/              PNG 아이콘 + SVG 원본
 ├── examples/           ⭐ 테스트용 와이파이 카드 이미지
-│   ├── card1-modern-cafe.png
-│   ├── card2-handwritten.png
-│   └── card3-minimal-dark.png
+├── cli/                ⭐ 데스크톱 컴패니언 (v0.8)
+│   ├── wifi-snap.sh    bash 스크립트 (macOS · Linux)
+│   ├── wifi-snap.ps1   PowerShell (Windows)
+│   ├── install.sh      한 줄 설치 (bash)
+│   ├── install.ps1     한 줄 설치 (PowerShell)
+│   └── README.md
 └── lib/
     ├── claude.js       Anthropic API + 추출 프롬프트
     ├── wifi.js         WiFi QR 문자열 + OS 명령어
@@ -181,6 +184,38 @@ base64 안에 SSID/PW/security만 들어있어서 받는 사람 데이터로는 
 
 ---
 
+## 💻 데스크톱 자동 연결 (v0.8)
+
+폰에서 추출한 와이파이를 PC에서도 한 줄로 적용. 백엔드 0, 외부 서버 호출 0.
+
+### 설치 (한 번만)
+
+**macOS / Linux**:
+```bash
+curl -sSL https://iq-agent-lab.github.io/iq-wifi-snap/cli/install.sh | bash
+```
+
+**Windows (PowerShell)**:
+```powershell
+iwr -useb https://iq-agent-lab.github.io/iq-wifi-snap/cli/install.ps1 | iex
+```
+
+### 사용
+
+폰에서 추출 → "링크 복사" → 본인 카톡/메모로 → PC 터미널에:
+```bash
+wifi-snap "https://iq-agent-lab.github.io/iq-wifi-snap/?wifi=eyJzIjoi..."
+```
+
+또는 SSID/PW 직접:
+```bash
+wifi-snap connect "Starbucks" "passw0rd"
+```
+
+자세히: [cli/README.md](./cli/README.md)
+
+---
+
 ## 로드맵
 
 - [x] **v0.1** — 사진 → 추출 → QR + 명령어
@@ -189,10 +224,11 @@ base64 안에 SSID/PW/security만 들어있어서 받는 사람 데이터로는 
 - [x] **v0.3.1** — 테스트 예시 이미지 추가 (examples/)
 - [x] **v0.4** — 브랜드 리디자인 (Wifi Snap), 새 로고, 커스텀 삭제 확인, 카메라 권한 상태 표시, PWA 설치 흐름 개선
 - [x] **v0.5** — 🐛 [hidden] CSS 충돌 버그 픽스, 카카오톡 직접 공유 (Kakao SDK), 캡티브 포털 보조 링크
-- [x] **v0.6** — 온디바이스 OCR 폴백 (Tesseract.js + 로컬 파서). 인터넷 없이도 추출 가능.
-- [x] **v0.7** — 사용성 정리 라운드. 인앱 브라우저 감지+안내, 위치 권한 흐름 개선, OCR 사전 다운로드 안내, iOS 아이콘 사이즈 확장, 아이콘 디자인 다듬기.
-- [ ] v0.8 — 데스크톱 컴패니언 (WebSocket · 페어링)
+- [x] **v0.6** — 온디바이스 OCR 폴백 (Tesseract.js + 로컬 파서)
+- [x] **v0.7** — 사용성 정리. 인앱 브라우저 감지+안내, 위치 권한 흐름 개선, OCR 사전 다운로드 안내, iOS 아이콘 사이즈 확장.
+- [x] **v0.8** — 데스크톱 컴패니언 CLI. macOS/Linux/Windows에 한 줄 설치 후 공유 URL로 즉시 와이파이 연결.
 - [ ] v0.9 — 자동 속도 측정, 카페별 평균 속도 지도
+- [ ] v0.10 — wifi-snap:// 커스텀 URL 스킴 (클릭만으로 CLI 실행)
 
 ---
 

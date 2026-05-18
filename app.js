@@ -412,6 +412,14 @@ function renderQRAndCommands(r) {
   $('cmd-macos').textContent = macosCommand({ ...r, iface });
   $('cmd-linux').textContent = linuxCommand(r);
   $('cmd-windows').textContent = windowsCommand(r);
+
+  // CLI commands
+  const shareUrl = createShareUrl(r);
+  $('cli-install-bash').textContent =
+    'curl -sSL https://iq-agent-lab.github.io/iq-wifi-snap/cli/install.sh | bash';
+  $('cli-install-ps').textContent =
+    'iwr -useb https://iq-agent-lab.github.io/iq-wifi-snap/cli/install.ps1 | iex';
+  $('cli-use').textContent = `wifi-snap "${shareUrl}"`;
 }
 
 // ============ inline edit ============
