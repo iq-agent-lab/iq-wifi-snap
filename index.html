@@ -16,7 +16,17 @@
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/icon-192.png" type="image/png">
+
+<!-- Favicons (브라우저 탭, Android 바로가기 fallback) -->
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<link rel="shortcut icon" href="icons/favicon-32.png">
+
+<!-- iOS / Apple -->
 <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
 <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
 <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
@@ -237,6 +247,19 @@
           (폰에서 본인 카톡으로 URL 보낸 뒤 PC에서 붙여넣는 흐름)
         </p>
 
+        <div class="cli-bootstrap-note">
+          <strong>⚠ 알아둘 것:</strong> 이 CLI는 PC에 어떤 식으로든 <strong>인터넷이 있을 때</strong>만 동작해요.
+          이미 다른 와이파이/이더넷/폰 핫스팟 연결 중이면 OK. PC가 완전 오프라인이면 URL을 받아올 방법이 없습니다.
+          <details class="alt-methods">
+            <summary>완전 오프라인 PC를 와이파이에 붙이는 대안</summary>
+            <ol>
+              <li><strong>폰 핫스팟 5초만</strong> — 폰 설정 → 개인용 핫스팟 ON → PC가 폰 인터넷으로 잠깐 연결 → <code>wifi-snap</code> 실행 → 카페 와이파이로 전환. 끝나면 핫스팟 꺼도 됨.</li>
+              <li><strong>Apple 끼리</strong> — 폰에서 SSID/PW 복사 → macOS Continuity 클립보드로 Mac에 자동 동기화 → Mac 터미널에 붙여넣기. AirDrop도 가능.</li>
+              <li><strong>직접 타이핑</strong> — 폰 화면 보면서 손으로 입력. 위 결과 화면의 SSID/PW 박스를 확대해서 보세요.</li>
+            </ol>
+          </details>
+        </div>
+
         <p class="cli-step"><strong>1. PC에 한 번 설치 (macOS / Linux)</strong></p>
         <pre id="cli-install-bash" class="mono"></pre>
         <button data-copy="cli-install-bash">설치 명령 복사</button>
@@ -373,7 +396,7 @@
 </main>
 
 <footer>
-  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.8.0</span></span>
+  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.9.0</span></span>
 </footer>
 
 <!-- ============== CUSTOM CONFIRM MODAL ============== -->

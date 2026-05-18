@@ -1,5 +1,5 @@
 /* =====================================================
-   Wifi Snap · clean minimal · coral accent · v0.8
+   Wifi Snap · clean minimal · coral accent · v0.9
    ===================================================== */
 
 :root {
@@ -618,6 +618,53 @@ code {
   padding-top: 0.75rem;
   border-top: 1px dashed var(--line);
   line-height: 1.6 !important;
+}
+
+.cli-bootstrap-note {
+  margin: 0.75rem 0 1rem;
+  padding: 0.85rem 1rem;
+  background: #fdf6e3;
+  border-left: 3px solid #b8860b;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #4a3a16;
+}
+.cli-bootstrap-note strong {
+  color: #5c4a16;
+}
+.alt-methods {
+  margin-top: 0.6rem;
+  font-size: 0.88rem;
+}
+.alt-methods summary {
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0.3rem 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+}
+.alt-methods summary::-webkit-details-marker { display: none; }
+.alt-methods summary::before {
+  content: '▸';
+  margin-right: 0.4rem;
+  transition: transform 0.15s;
+  color: var(--accent);
+}
+.alt-methods[open] summary::before {
+  transform: rotate(90deg);
+}
+.alt-methods ol {
+  margin-top: 0.5rem;
+  padding-left: 1.4rem;
+  color: #5c4a16;
+}
+.alt-methods li {
+  margin-bottom: 0.4rem;
+}
+.alt-methods code {
+  background: rgba(255,255,255,0.5);
 }
 
 /* ===== Headings ===== */
