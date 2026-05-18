@@ -1,5 +1,5 @@
 /* =====================================================
-   iq-wifi-snap · clean minimal · coral accent · v0.2
+   iq-wifi-snap · clean minimal · coral accent · v0.3
    ===================================================== */
 
 :root {
@@ -55,7 +55,6 @@ body {
   width: 100%;
   margin: 0 auto;
 }
-
 main {
   max-width: 640px;
   width: 100%;
@@ -63,7 +62,6 @@ main {
   padding: 2.5rem 1.5rem 4rem;
   flex: 1;
 }
-
 footer {
   max-width: 640px;
   width: 100%;
@@ -86,11 +84,8 @@ footer {
   width: 9px; height: 9px;
   background: var(--accent);
   border-radius: 50%;
-  display: inline-block;
 }
-.nav {
-  display: flex; gap: 0.15rem;
-}
+.nav { display: flex; gap: 0.15rem; }
 .nav button {
   background: none; border: none;
   font: inherit; font-size: 0.88rem;
@@ -111,12 +106,7 @@ footer {
   margin-bottom: 0.75rem;
 }
 .hero .accent { color: var(--accent); }
-
-.lead {
-  font-size: 1rem;
-  max-width: 30rem;
-  margin-bottom: 2rem;
-}
+.lead { font-size: 1rem; max-width: 30rem; margin-bottom: 2rem; }
 
 /* ===== Muted ===== */
 .muted { color: var(--muted); }
@@ -160,27 +150,46 @@ button.ghost {
 }
 button.ghost:hover { color: var(--fg); background: none; }
 button.ghost.danger:hover { color: var(--error); }
-
 button.ghost-mini {
   background: none;
   border: none;
   color: var(--muted);
   padding: 0.25rem 0.5rem;
-  font-size: 1.1rem;
+  font-size: 0.85rem;
   line-height: 1;
 }
 button.ghost-mini:hover { color: var(--accent); background: none; }
+button.ghost-mini.regen {
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-size: 0.78rem;
+  padding: 0.3rem 0.6rem;
+  margin-left: auto;
+}
+button.ghost-mini.regen:hover { background: var(--accent-soft); }
 
 .secondary { display: inline-block; }
-
 .actions {
   display: flex; gap: 0.6rem; flex-wrap: wrap;
   margin-bottom: 2.5rem;
 }
-
 .row {
   display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
   margin-top: 0.75rem;
+}
+
+/* ===== Shared banner ===== */
+.shared-banner {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-weight: 500;
+  font-size: 0.92rem;
+  margin-bottom: 1.5rem;
 }
 
 /* ===== Nearby ===== */
@@ -220,19 +229,9 @@ button.ghost-mini:hover { color: var(--accent); background: none; }
   border-color: var(--accent);
   transform: translateX(2px);
 }
-.nearby-name {
-  font-weight: 600;
-  margin-bottom: 0.15rem;
-}
-.nearby-sub {
-  font-size: 0.82rem;
-  color: var(--muted);
-}
-.nearby-arrow {
-  color: var(--accent);
-  font-size: 1.2rem;
-  margin-left: 0.75rem;
-}
+.nearby-name { font-weight: 600; margin-bottom: 0.15rem; }
+.nearby-sub { font-size: 0.82rem; color: var(--muted); }
+.nearby-arrow { color: var(--accent); font-size: 1.2rem; margin-left: 0.75rem; }
 
 /* ===== Hints ===== */
 .hints {
@@ -241,10 +240,7 @@ button.ghost-mini:hover { color: var(--accent); background: none; }
   padding-top: 2rem;
   border-top: 1px solid var(--line);
 }
-.hint {
-  display: flex; gap: 1rem;
-  align-items: flex-start;
-}
+.hint { display: flex; gap: 1rem; align-items: flex-start; }
 .hint-num {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.78rem;
@@ -253,11 +249,7 @@ button.ghost-mini:hover { color: var(--accent); background: none; }
   padding-top: 0.15rem;
   letter-spacing: 0.05em;
 }
-.hint strong {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 0.2rem;
-}
+.hint strong { display: block; font-weight: 600; margin-bottom: 0.2rem; }
 
 /* ===== Camera ===== */
 .camera {
@@ -280,9 +272,7 @@ button.ghost-mini:hover { color: var(--accent); background: none; }
 .cam-actions .primary { flex: 1; }
 
 /* ===== Fields ===== */
-.field {
-  margin: 1.25rem 0;
-}
+.field { margin: 1.25rem 0; }
 .field label {
   display: block;
   font-size: 0.72rem;
@@ -310,6 +300,32 @@ button.ghost-mini:hover { color: var(--accent); background: none; }
   padding: 0.35rem 0.7rem;
   font-size: 0.8rem;
 }
+
+/* ===== Inline editable SSID/PW ===== */
+.field.editable .value {
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+}
+.inline-edit {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.05rem;
+  color: var(--fg);
+  padding: 0.4rem 0;
+  min-width: 0;
+  width: 100%;
+}
+.inline-edit:focus {
+  outline: none;
+}
+.field.editable .value:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* settings inputs */
 .field input[type=password],
 .field input[type=text],
 .field select {
@@ -329,18 +345,16 @@ button.ghost-mini:hover { color: var(--accent); background: none; }
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-/* ===== Meta ===== */
+/* ===== Meta row ===== */
 .meta {
   display: flex; gap: 0.5rem 1rem; flex-wrap: wrap;
+  align-items: center;
   font-size: 0.85rem;
   color: var(--muted);
   margin: -0.5rem 0 1.25rem;
   padding: 0.25rem 0;
 }
-.meta strong {
-  color: var(--fg);
-  font-weight: 500;
-}
+.meta strong { color: var(--fg); font-weight: 500; }
 
 /* ===== Label input ===== */
 .label-block {
@@ -364,6 +378,7 @@ button.ghost-mini:hover { color: var(--accent); background: none; }
   background: var(--surface);
 }
 .label-block input::placeholder { color: var(--muted); }
+.label-block input:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ===== Toggle ===== */
 .toggle {
@@ -393,10 +408,18 @@ button.ghost-mini:hover { color: var(--accent); background: none; }
   border-radius: var(--radius);
   margin-bottom: 0.75rem;
 }
-#qr-canvas img, #qr-canvas canvas {
-  display: block;
-}
+#qr-canvas img, #qr-canvas canvas { display: block; }
 .qr-block p { text-align: center; }
+
+.qr-actions {
+  display: flex; gap: 0.5rem; flex-wrap: wrap;
+  margin-top: 1rem;
+  justify-content: center;
+}
+.qr-actions button {
+  font-size: 0.88rem;
+  padding: 0.55rem 1rem;
+}
 
 /* ===== Command Blocks ===== */
 .cmd-block {
@@ -481,9 +504,7 @@ h3 {
 .setting-block:last-child { border-bottom: none; }
 
 /* ===== History ===== */
-#history-list {
-  margin-top: 1.25rem;
-}
+#history-list { margin-top: 1.25rem; }
 .history-item {
   display: flex; justify-content: space-between; align-items: flex-start;
   padding: 1rem 1.1rem;
@@ -586,8 +607,11 @@ a:hover { border-bottom-color: var(--accent); }
   main { padding: 1.75rem 1.1rem 3rem; }
   .nav button { padding: 0.4rem 0.55rem; font-size: 0.85rem; }
   .field .value > span { font-size: 0.95rem; }
+  .inline-edit { font-size: 0.95rem; }
   .actions { gap: 0.5rem; }
   .actions button, .actions .secondary { flex: 1; }
+  .qr-actions { flex-direction: column; width: 100%; }
+  .qr-actions button { width: 100%; }
   .history-item {
     flex-direction: column;
     align-items: stretch;
@@ -596,6 +620,7 @@ a:hover { border-bottom-color: var(--accent); }
   .h-actions {
     flex-direction: row;
     justify-content: flex-end;
+    flex-wrap: wrap;
   }
 }
 

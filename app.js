@@ -1,5 +1,5 @@
-// app.js v0.2
-// 진입점: 카메라 / 업로드 / 위치 기반 자동 복원 / PWA 설치
+// app.js v0.3
+// 진입점: 카메라 / 업로드 / 위치 자동 복원 / 공유 링크 / 편집 / PWA
 
 import { extractWifi } from './lib/claude.js';
 import {
@@ -14,6 +14,13 @@ import {
   findNearby,
   formatDistance,
 } from './lib/location.js';
+import {
+  createShareUrl,
+  parseShareUrl,
+  shareViaSystem,
+  downloadQR,
+  buildShareText,
+} from './lib/share.js';
 
 // ============ helpers ============
 const $ = (id) => document.getElementById(id);
@@ -21,16 +28,15 @@ const escapeHtml = (s) =>
   String(s).replace(
     /[&<>"']/g,
     (c) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[
-        c
-      ])
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
 
 const CONF_LABEL = { high: '높음', medium: '중간', low: '낮음' };
 
 let cameraStream = null;
 let installPromptEvent = null;
-let currentResultTs = null; // 현재 화면에 떠 있는 결과의 history ts
+let currentResultTs = null; // 현재 화면 결과의 history ts (공유받은 거면 null)
+let currentResult = null; // 현재 화면에 표시 중인 데이터 (편집 상태 포함)
 
 // ============ navigation ============
 function showView(name) {
@@ -87,6 +93,7 @@ async function processImage(dataUrl) {
   $('result-loading').hidden = false;
   $('result-data').hidden = true;
   $('result-error').hidden = true;
+  $('shared-banner').hidden = true;
   showView('result');
 
   const m = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
@@ -96,7 +103,6 @@ async function processImage(dataUrl) {
   }
   const [, mediaType, base64] = m;
 
-  // 위치는 추출과 병렬로 (실패해도 추출은 계속)
   const locationPromise = storage.isLocationEnabled()
     ? getCurrentPosition().catch(() => null)
     : Promise.resolve(null);
@@ -123,7 +129,12 @@ async function processImage(dataUrl) {
     });
     currentResultTs = saved.ts;
 
-    renderResult({ ...result, location: saved.location, label: saved.label });
+    renderResult({
+      ...result,
+      location: saved.location,
+      label: saved.label,
+      _shared: false,
+    });
   } catch (e) {
     showError(e.message);
   }
@@ -139,11 +150,22 @@ function showError(msg) {
 function renderResult(r) {
   $('result-loading').hidden = true;
   $('result-data').hidden = false;
+  $('shared-banner').hidden = !r._shared;
 
-  $('out-ssid').textContent = r.ssid;
-  $('out-pass').textContent = r.password || '(비밀번호 없음)';
-  $('out-conf').textContent = CONF_LABEL[r.confidence] || r.confidence;
-  $('out-notes').textContent = r.notes ? `· ${r.notes}` : '';
+  currentResult = { ...r };
+
+  $('out-ssid').value = r.ssid;
+  $('out-pass').value = r.password || '';
+
+  // 공유받은 경우 신뢰도 라벨 숨김 (의미 없음)
+  if (r._shared) {
+    $('out-conf-wrap').hidden = true;
+    $('out-notes').textContent = '';
+  } else {
+    $('out-conf-wrap').hidden = false;
+    $('out-conf').textContent = CONF_LABEL[r.confidence] || r.confidence || '-';
+    $('out-notes').textContent = r.notes ? `· ${r.notes}` : '';
+  }
 
   const locEl = $('out-location');
   if (r.location) {
@@ -153,12 +175,26 @@ function renderResult(r) {
     locEl.hidden = true;
   }
 
-  // 라벨 입력 초기화
+  // 라벨 (공유받은 경우는 보여만 주고 저장은 안 함)
   $('label-input').value = r.label || '';
+  $('label-input').disabled = !!r._shared;
+  $('label-input').placeholder = r._shared
+    ? '공유받은 정보는 저장되지 않음'
+    : '카페 이름 (선택, Enter로 저장)';
   $('label-saved').hidden = true;
 
+  $('btn-regen-qr').hidden = true;
+
+  renderQRAndCommands(r);
+}
+
+function renderQRAndCommands(r) {
   // QR
-  const qrStr = wifiQRString(r);
+  const qrStr = wifiQRString({
+    ssid: r.ssid,
+    password: r.password,
+    security: r.security,
+  });
   const qrEl = $('qr-canvas');
   qrEl.innerHTML = '';
   // eslint-disable-next-line no-undef, no-new
@@ -178,7 +214,103 @@ function renderResult(r) {
   $('cmd-windows').textContent = windowsCommand(r);
 }
 
-// ============ nearby (location-based recall) ============
+// ============ inline edit ============
+function setupEditableFields() {
+  const onEdit = () => {
+    // 편집 감지 → QR 갱신 버튼 노출
+    const ssid = $('out-ssid').value.trim();
+    const pass = $('out-pass').value;
+    if (
+      currentResult &&
+      (ssid !== currentResult.ssid || pass !== currentResult.password)
+    ) {
+      $('btn-regen-qr').hidden = false;
+    } else {
+      $('btn-regen-qr').hidden = true;
+    }
+  };
+  $('out-ssid').addEventListener('input', onEdit);
+  $('out-pass').addEventListener('input', onEdit);
+
+  $('btn-regen-qr').addEventListener('click', () => {
+    if (!currentResult) return;
+    const newSsid = $('out-ssid').value.trim();
+    const newPass = $('out-pass').value;
+    if (!newSsid) {
+      alert('SSID는 비울 수 없습니다.');
+      return;
+    }
+    currentResult = {
+      ...currentResult,
+      ssid: newSsid,
+      password: newPass,
+    };
+    renderQRAndCommands(currentResult);
+    // history도 업데이트 (공유받은 결과는 ts가 없으므로 안전)
+    if (currentResultTs) {
+      storage.updateHistory(currentResultTs, {
+        ssid: newSsid,
+        password: newPass,
+      });
+    }
+    $('btn-regen-qr').hidden = true;
+    flashSaved($('btn-regen-qr'), '갱신됨');
+  });
+}
+
+function flashSaved(targetForFeedback, text = '됨') {
+  // 간단 토스트 대용: 버튼 라벨 잠깐 변경
+  const fb = $('share-feedback');
+  fb.textContent = text;
+  fb.hidden = false;
+  setTimeout(() => (fb.hidden = true), 1500);
+}
+
+// ============ sharing ============
+async function handleShare() {
+  if (!currentResult) return;
+  const url = createShareUrl(currentResult);
+  const text = buildShareText(currentResult);
+  const title = currentResult.label
+    ? `${currentResult.label} 와이파이`
+    : '와이파이 정보';
+
+  const res = await shareViaSystem({ title, text, url });
+  if (res.method === 'share') {
+    flashSaved(null, '공유됨');
+  } else if (res.method === 'clipboard') {
+    flashSaved(null, '링크가 클립보드에 복사되었습니다');
+  } else if (res.method === 'cancel') {
+    /* 취소: 조용히 */
+  } else {
+    alert('공유에 실패했습니다.');
+  }
+}
+
+async function handleCopyShareLink() {
+  if (!currentResult) return;
+  const url = createShareUrl(currentResult);
+  try {
+    await navigator.clipboard.writeText(url);
+    flashSaved(null, '공유 링크 복사됨');
+  } catch {
+    // 폴백: prompt로 수동 복사
+    prompt('아래 링크를 복사하세요:', url);
+  }
+}
+
+function handleDownloadQR() {
+  if (!currentResult) return;
+  try {
+    const safeSsid = currentResult.ssid.replace(/[^a-zA-Z0-9가-힣_-]/g, '_');
+    downloadQR($('qr-canvas'), `wifi-${safeSsid}.png`);
+    flashSaved(null, '저장됨');
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+// ============ nearby ============
 async function refreshNearby() {
   const section = $('nearby-section');
   const list = $('nearby-list');
@@ -197,7 +329,7 @@ async function refreshNearby() {
 
   try {
     const pos = await getCurrentPosition({ timeout: 5000, maxAge: 60000 });
-    const nearby = findNearby(pos, withLoc, 100); // 100m 이내
+    const nearby = findNearby(pos, withLoc, 100);
 
     if (nearby.length === 0) {
       section.hidden = true;
@@ -223,7 +355,6 @@ async function refreshNearby() {
       .join('');
     section.hidden = false;
   } catch (e) {
-    // 위치 실패 시 조용히 숨김 (홈 화면 깔끔하게)
     section.hidden = true;
   }
 }
@@ -247,11 +378,7 @@ function renderHistory() {
       (e) => `
     <div class="history-item">
       <div class="h-info">
-        ${
-          e.label
-            ? `<div class="h-label">${escapeHtml(e.label)}</div>`
-            : ''
-        }
+        ${e.label ? `<div class="h-label">${escapeHtml(e.label)}</div>` : ''}
         <div class="h-ssid">${escapeHtml(e.ssid)}</div>
         <div class="h-pass">${escapeHtml(e.password || '(없음)')}</div>
         <div class="h-meta">
@@ -261,7 +388,8 @@ function renderHistory() {
       </div>
       <div class="h-actions">
         <button data-action="copy-pass" data-ts="${e.ts}">PW 복사</button>
-        <button data-action="reuse" data-ts="${e.ts}">QR 보기</button>
+        <button data-action="share-entry" data-ts="${e.ts}">공유</button>
+        <button data-action="reuse" data-ts="${e.ts}">QR</button>
         <button data-action="delete" data-ts="${e.ts}">삭제</button>
       </div>
     </div>
@@ -282,8 +410,49 @@ function reuseEntry(ts) {
     notes: '기록에서 복원',
     location: item.location,
     label: item.label,
+    _shared: false,
   });
   showView('result');
+}
+
+async function shareEntryFromHistory(ts) {
+  const item = storage.getHistory().find((x) => x.ts === ts);
+  if (!item) return;
+  const payload = {
+    ssid: item.ssid,
+    password: item.password,
+    security: item.security,
+    label: item.label,
+  };
+  const url = createShareUrl(payload);
+  const text = buildShareText(payload);
+  const title = item.label ? `${item.label} 와이파이` : '와이파이 정보';
+  await shareViaSystem({ title, text, url });
+}
+
+// ============ deep link import ============
+function tryImportFromUrl() {
+  const imported = parseShareUrl(window.location.search);
+  if (!imported) return false;
+
+  // URL에서 wifi 파라미터 제거 (뒤로가기/새로고침 시 다시 임포트되는 거 방지)
+  const cleanUrl = new URL(window.location.href);
+  cleanUrl.searchParams.delete('wifi');
+  window.history.replaceState({}, '', cleanUrl.toString());
+
+  currentResultTs = null; // 공유받은 데이터는 자동 저장 안 함
+  renderResult({
+    ssid: imported.ssid,
+    password: imported.password,
+    security: imported.security,
+    label: imported.label,
+    confidence: 'high',
+    notes: '',
+    location: null,
+    _shared: true,
+  });
+  showView('result');
+  return true;
 }
 
 // ============ PWA install ============
@@ -313,7 +482,6 @@ function setupInstallPrompt() {
 
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
-  // file:// 또는 비-HTTPS에서는 SW 등록 실패하므로 무시
   navigator.serviceWorker
     .register('sw.js')
     .catch((err) => console.warn('SW 등록 실패:', err.message));
@@ -357,14 +525,23 @@ function init() {
     e.target.value = '';
   });
 
-  // ----- nearby refresh -----
+  // ----- nearby -----
   $('btn-refresh-nearby').addEventListener('click', refreshNearby);
 
-  // ----- label input (Enter to save) -----
+  // ----- editable result fields -----
+  setupEditableFields();
+
+  // ----- share buttons -----
+  $('btn-share').addEventListener('click', handleShare);
+  $('btn-share-link').addEventListener('click', handleCopyShareLink);
+  $('btn-download-qr').addEventListener('click', handleDownloadQR);
+
+  // ----- label -----
   $('label-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && currentResultTs) {
       const v = e.target.value.trim();
       storage.updateHistory(currentResultTs, { label: v || null });
+      currentResult.label = v || null;
       $('label-saved').hidden = false;
       setTimeout(() => ($('label-saved').hidden = true), 1500);
     }
@@ -373,8 +550,7 @@ function init() {
   // ----- settings: API key -----
   $('api-key-input').value = storage.getApiKey();
   $('btn-save-key').addEventListener('click', () => {
-    const v = $('api-key-input').value.trim();
-    storage.setApiKey(v);
+    storage.setApiKey($('api-key-input').value.trim());
     $('key-saved').hidden = false;
     setTimeout(() => ($('key-saved').hidden = true), 1500);
   });
@@ -395,16 +571,11 @@ function init() {
   $('loc-toggle').checked = storage.isLocationEnabled();
   $('loc-toggle').addEventListener('change', async (e) => {
     if (e.target.checked) {
-      // 토글 켤 때 권한 미리 요청 (UX: 카페에서 처음 켤 때 권한 알람 안 뜨고 부드럽게)
       try {
         await getCurrentPosition({ timeout: 5000 });
         storage.setLocationEnabled(true);
       } catch (err) {
-        alert(
-          '위치 권한이 거부됐거나 가져오지 못했습니다: ' +
-            err.message +
-            '\n브라우저 설정에서 위치 권한을 허용해주세요.'
-        );
+        alert('위치 권한이 거부됐거나 가져오지 못했습니다: ' + err.message);
         e.target.checked = false;
         storage.setLocationEnabled(false);
       }
@@ -421,12 +592,23 @@ function init() {
 
   // ----- copy buttons (delegated) -----
   document.body.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-copy], [data-action]');
+    const t = e.target.closest('[data-copy], [data-copy-value], [data-action]');
     if (!t) return;
 
+    // textContent 복사
     if (t.dataset.copy) {
       const target = $(t.dataset.copy);
       navigator.clipboard.writeText(target.textContent);
+      const old = t.textContent;
+      t.textContent = '복사됨';
+      setTimeout(() => (t.textContent = old), 1200);
+      return;
+    }
+
+    // input value 복사
+    if (t.dataset.copyValue) {
+      const target = $(t.dataset.copyValue);
+      navigator.clipboard.writeText(target.value);
       const old = t.textContent;
       t.textContent = '복사됨';
       setTimeout(() => (t.textContent = old), 1200);
@@ -449,6 +631,8 @@ function init() {
       renderHistory();
     } else if (action === 'reuse' || action === 'reuse-nearby') {
       reuseEntry(ts);
+    } else if (action === 'share-entry') {
+      shareEntryFromHistory(ts);
     }
   });
 
@@ -461,22 +645,24 @@ function init() {
   });
 
   renderHistory();
-  showView('home');
-  refreshNearby();
   setupInstallPrompt();
   registerServiceWorker();
 
-  // ----- first-run nudge -----
-  if (!storage.getApiKey()) {
-    setTimeout(() => {
-      if (
-        confirm(
-          'Anthropic API 키가 설정되지 않았습니다. 지금 설정으로 이동할까요?'
-        )
-      ) {
-        showView('settings');
-      }
-    }, 400);
+  // ----- 진입 시 URL에 wifi 파라미터가 있으면 임포트, 아니면 홈 -----
+  const imported = tryImportFromUrl();
+  if (!imported) {
+    showView('home');
+    refreshNearby();
+
+    if (!storage.getApiKey()) {
+      setTimeout(() => {
+        if (
+          confirm('Anthropic API 키가 설정되지 않았습니다. 지금 설정으로 이동할까요?')
+        ) {
+          showView('settings');
+        }
+      }, 400);
+    }
   }
 }
 

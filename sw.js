@@ -1,10 +1,10 @@
 // sw.js - service worker
 // 전략:
-//   - 앱 셸 (HTML/CSS/JS/icon): cache-first, 백그라운드 갱신 (stale-while-revalidate)
+//   - 앱 셸 (HTML/CSS/JS/icon): cache-first + 백그라운드 갱신 (stale-while-revalidate)
 //   - 외부 CDN (fonts, qrcode): cache-first
-//   - Anthropic API: network-only (캐시 절대 안 함, 추출 결과는 매번 fresh)
+//   - Anthropic API: network-only (캐시 절대 안 함)
 
-const CACHE = 'iq-wifi-snap-v0.2.0';
+const CACHE = 'iq-wifi-snap-v0.3.0';
 
 const SHELL = [
   './',
@@ -16,6 +16,7 @@ const SHELL = [
   './lib/wifi.js',
   './lib/storage.js',
   './lib/location.js',
+  './lib/share.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-180.png',
@@ -44,7 +45,7 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(req.url);
 
-  // Anthropic API: 절대 캐시하지 않음
+  // Anthropic API는 캐시 안 함
   if (url.host === 'api.anthropic.com') return;
 
   // stale-while-revalidate
