@@ -1,5 +1,5 @@
-// app.js v0.3
-// 진입점: 카메라 / 업로드 / 위치 자동 복원 / 공유 링크 / 편집 / PWA
+// app.js v0.4
+// 진입점: 카메라 권한 정교화 / 커스텀 confirm / PWA 설치 분기 / 브랜드 갱신
 
 import { extractWifi } from './lib/claude.js';
 import {
@@ -35,8 +35,18 @@ const CONF_LABEL = { high: '높음', medium: '중간', low: '낮음' };
 
 let cameraStream = null;
 let installPromptEvent = null;
-let currentResultTs = null; // 현재 화면 결과의 history ts (공유받은 거면 null)
-let currentResult = null; // 현재 화면에 표시 중인 데이터 (편집 상태 포함)
+let currentResultTs = null;
+let currentResult = null;
+
+// ============ env detection ============
+const env = {
+  isIOS:
+    /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
+  isAndroid: /Android/.test(navigator.userAgent),
+  isStandalone:
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true,
+};
 
 // ============ navigation ============
 function showView(name) {
@@ -46,8 +56,70 @@ function showView(name) {
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
+// ============ custom confirm modal ============
+function confirmModal({ title, message, okText = '삭제', cancelText = '취소' }) {
+  return new Promise((resolve) => {
+    const modal = $('confirm-modal');
+    $('confirm-title').textContent = title;
+    $('confirm-message').textContent = message || '';
+    $('confirm-ok').textContent = okText;
+    $('confirm-cancel').textContent = cancelText;
+
+    const cleanup = () => {
+      modal.hidden = true;
+      $('confirm-ok').removeEventListener('click', onOk);
+      $('confirm-cancel').removeEventListener('click', onCancel);
+      modal.querySelector('.modal-backdrop').removeEventListener('click', onCancel);
+      document.removeEventListener('keydown', onKey);
+    };
+    const onOk = () => {
+      cleanup();
+      resolve(true);
+    };
+    const onCancel = () => {
+      cleanup();
+      resolve(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') onCancel();
+      else if (e.key === 'Enter') onOk();
+    };
+
+    $('confirm-ok').addEventListener('click', onOk);
+    $('confirm-cancel').addEventListener('click', onCancel);
+    modal.querySelector('.modal-backdrop').addEventListener('click', onCancel);
+    document.addEventListener('keydown', onKey);
+
+    modal.hidden = false;
+    setTimeout(() => $('confirm-cancel').focus(), 50);
+  });
+}
+
 // ============ camera ============
+async function getCameraPermission() {
+  if (!navigator.permissions || !navigator.permissions.query) {
+    return 'unsupported';
+  }
+  try {
+    const status = await navigator.permissions.query({ name: 'camera' });
+    return status.state; // 'granted' | 'denied' | 'prompt'
+  } catch {
+    return 'unsupported';
+  }
+}
+
 async function startCamera() {
+  const perm = await getCameraPermission();
+  if (perm === 'denied') {
+    alert(
+      '카메라 권한이 차단되어 있습니다.\n\n' +
+        '주소창 왼쪽의 사이트 정보 아이콘 또는 브라우저 설정에서 ' +
+        '이 사이트의 카메라 권한을 "허용"으로 바꿔주세요.\n\n' +
+        '그동안은 "파일 업로드" 버튼을 사용하실 수 있습니다.'
+    );
+    return;
+  }
+
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } },
@@ -55,12 +127,20 @@ async function startCamera() {
     $('video').srcObject = cameraStream;
     $('camera-section').hidden = false;
     $('camera-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // 권한 상태 변경 감지: 설정 화면 가서 다시 들어왔을 때 반영
+    updateCameraStatus();
   } catch (e) {
-    alert(
-      '카메라 접근 실패: ' +
-        e.message +
-        '\n파일 업로드를 사용하거나, HTTPS 환경에서 다시 시도해주세요.'
-    );
+    let msg = '카메라 접근 실패: ' + e.message;
+    if (e.name === 'NotAllowedError') {
+      msg =
+        '카메라 권한이 거부되었습니다.\n' +
+        '주소창의 카메라 아이콘에서 권한을 "허용"으로 바꿔주세요.';
+    } else if (e.name === 'NotFoundError') {
+      msg = '이 기기에서 카메라를 찾을 수 없습니다.';
+    } else if (e.name === 'NotReadableError') {
+      msg = '다른 앱이 카메라를 사용 중입니다. 해당 앱을 닫고 다시 시도해주세요.';
+    }
+    alert(msg + '\n\n파일 업로드를 사용하실 수 있습니다.');
   }
 }
 
@@ -79,6 +159,28 @@ function captureFrame() {
   canvas.height = v.videoHeight;
   canvas.getContext('2d').drawImage(v, 0, 0);
   return canvas.toDataURL('image/jpeg', 0.88);
+}
+
+async function updateCameraStatus() {
+  const el = $('camera-status');
+  if (!el) return;
+  const perm = await getCameraPermission();
+  el.classList.remove('granted', 'denied', 'prompt');
+  if (perm === 'granted') {
+    el.classList.add('granted');
+    el.textContent = '✓ 카메라 권한이 허용되어 있습니다. 매번 묻지 않습니다.';
+  } else if (perm === 'denied') {
+    el.classList.add('denied');
+    el.textContent =
+      '✗ 카메라 권한이 차단되어 있습니다. 주소창 카메라 아이콘에서 "허용"으로 변경하세요.';
+  } else if (perm === 'prompt') {
+    el.classList.add('prompt');
+    el.textContent =
+      '⚠ 아직 권한이 결정되지 않았습니다. 카메라를 처음 열 때 한 번 "허용"을 선택하시면 이후엔 묻지 않습니다.';
+  } else {
+    el.textContent =
+      '이 브라우저는 권한 상태 확인을 지원하지 않습니다 (Safari 등). 처음 카메라 열 때 권한을 허용해주세요.';
+  }
 }
 
 // ============ processing ============
@@ -157,7 +259,6 @@ function renderResult(r) {
   $('out-ssid').value = r.ssid;
   $('out-pass').value = r.password || '';
 
-  // 공유받은 경우 신뢰도 라벨 숨김 (의미 없음)
   if (r._shared) {
     $('out-conf-wrap').hidden = true;
     $('out-notes').textContent = '';
@@ -175,7 +276,6 @@ function renderResult(r) {
     locEl.hidden = true;
   }
 
-  // 라벨 (공유받은 경우는 보여만 주고 저장은 안 함)
   $('label-input').value = r.label || '';
   $('label-input').disabled = !!r._shared;
   $('label-input').placeholder = r._shared
@@ -189,7 +289,6 @@ function renderResult(r) {
 }
 
 function renderQRAndCommands(r) {
-  // QR
   const qrStr = wifiQRString({
     ssid: r.ssid,
     password: r.password,
@@ -207,7 +306,6 @@ function renderQRAndCommands(r) {
     correctLevel: QRCode.CorrectLevel.M,
   });
 
-  // Commands
   const iface = storage.getIface();
   $('cmd-macos').textContent = macosCommand({ ...r, iface });
   $('cmd-linux').textContent = linuxCommand(r);
@@ -217,7 +315,6 @@ function renderQRAndCommands(r) {
 // ============ inline edit ============
 function setupEditableFields() {
   const onEdit = () => {
-    // 편집 감지 → QR 갱신 버튼 노출
     const ssid = $('out-ssid').value.trim();
     const pass = $('out-pass').value;
     if (
@@ -240,13 +337,8 @@ function setupEditableFields() {
       alert('SSID는 비울 수 없습니다.');
       return;
     }
-    currentResult = {
-      ...currentResult,
-      ssid: newSsid,
-      password: newPass,
-    };
+    currentResult = { ...currentResult, ssid: newSsid, password: newPass };
     renderQRAndCommands(currentResult);
-    // history도 업데이트 (공유받은 결과는 ts가 없으므로 안전)
     if (currentResultTs) {
       storage.updateHistory(currentResultTs, {
         ssid: newSsid,
@@ -254,12 +346,11 @@ function setupEditableFields() {
       });
     }
     $('btn-regen-qr').hidden = true;
-    flashSaved($('btn-regen-qr'), '갱신됨');
+    flashFeedback('갱신됨');
   });
 }
 
-function flashSaved(targetForFeedback, text = '됨') {
-  // 간단 토스트 대용: 버튼 라벨 잠깐 변경
+function flashFeedback(text) {
   const fb = $('share-feedback');
   fb.textContent = text;
   fb.hidden = false;
@@ -277,11 +368,11 @@ async function handleShare() {
 
   const res = await shareViaSystem({ title, text, url });
   if (res.method === 'share') {
-    flashSaved(null, '공유됨');
+    flashFeedback('공유됨');
   } else if (res.method === 'clipboard') {
-    flashSaved(null, '링크가 클립보드에 복사되었습니다');
+    flashFeedback('이 환경은 시스템 공유 시트를 지원하지 않습니다. 링크를 클립보드에 복사했어요. (폰에서는 카톡/인스타 시트가 직접 뜹니다)');
   } else if (res.method === 'cancel') {
-    /* 취소: 조용히 */
+    /* silent */
   } else {
     alert('공유에 실패했습니다.');
   }
@@ -292,9 +383,8 @@ async function handleCopyShareLink() {
   const url = createShareUrl(currentResult);
   try {
     await navigator.clipboard.writeText(url);
-    flashSaved(null, '공유 링크 복사됨');
+    flashFeedback('공유 링크 복사됨');
   } catch {
-    // 폴백: prompt로 수동 복사
     prompt('아래 링크를 복사하세요:', url);
   }
 }
@@ -304,7 +394,7 @@ function handleDownloadQR() {
   try {
     const safeSsid = currentResult.ssid.replace(/[^a-zA-Z0-9가-힣_-]/g, '_');
     downloadQR($('qr-canvas'), `wifi-${safeSsid}.png`);
-    flashSaved(null, '저장됨');
+    flashFeedback('저장됨');
   } catch (e) {
     alert(e.message);
   }
@@ -435,12 +525,11 @@ function tryImportFromUrl() {
   const imported = parseShareUrl(window.location.search);
   if (!imported) return false;
 
-  // URL에서 wifi 파라미터 제거 (뒤로가기/새로고침 시 다시 임포트되는 거 방지)
   const cleanUrl = new URL(window.location.href);
   cleanUrl.searchParams.delete('wifi');
   window.history.replaceState({}, '', cleanUrl.toString());
 
-  currentResultTs = null; // 공유받은 데이터는 자동 저장 안 함
+  currentResultTs = null;
   renderResult({
     ssid: imported.ssid,
     password: imported.password,
@@ -455,28 +544,78 @@ function tryImportFromUrl() {
   return true;
 }
 
-// ============ PWA install ============
-function setupInstallPrompt() {
+// ============ PWA install (revamped) ============
+function setupInstallExperience() {
+  const btn = $('btn-install');
+  const status = $('install-status');
+  const guide = $('install-guide');
+
+  // 이미 standalone으로 실행 중?
+  if (env.isStandalone) {
+    btn.hidden = true;
+    status.hidden = false;
+    status.classList.add('installed');
+    status.textContent = '✓ 이미 홈 화면에 설치되어 실행 중입니다.';
+    guide.innerHTML = '';
+    return;
+  }
+
+  // iOS Safari: beforeinstallprompt 미지원 → 가이드 직접 표시
+  if (env.isIOS) {
+    btn.hidden = true;
+    guide.innerHTML = `
+      <p><strong>iOS는 자동 설치 버튼이 동작하지 않습니다.</strong> 아래 단계로 직접 추가해주세요:</p>
+      <ol>
+        <li>Safari 하단의 <kbd>공유</kbd> 버튼 탭</li>
+        <li>메뉴를 스크롤해서 <kbd>홈 화면에 추가</kbd> 선택</li>
+        <li>우측 상단 <kbd>추가</kbd> 탭</li>
+      </ol>
+      <p class="small muted">앱처럼 동작하고 카메라/위치 권한도 더 안정적으로 유지됩니다.</p>
+    `;
+    return;
+  }
+
+  // Android Chrome / Edge / Desktop Chrome: beforeinstallprompt 대기
+  guide.innerHTML = env.isAndroid
+    ? '<p class="small">아래 버튼이 안 보이면 Chrome 메뉴 <kbd>⋮</kbd> → <strong>앱 설치</strong> 또는 <strong>홈 화면에 추가</strong>를 사용하세요.</p>'
+    : '<p class="small">아래 버튼이 안 보이면 주소창 오른쪽의 설치 아이콘 또는 메뉴 <kbd>⋮</kbd> → <strong>앱 설치</strong>를 사용하세요.</p>';
+
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     installPromptEvent = e;
-    const btn = $('btn-install');
     btn.hidden = false;
-    btn.addEventListener('click', async () => {
-      if (!installPromptEvent) return;
-      installPromptEvent.prompt();
-      const choice = await installPromptEvent.userChoice;
-      if (choice.outcome === 'accepted') {
-        btn.hidden = true;
-        $('install-hint').textContent = '설치되었습니다.';
-      }
-      installPromptEvent = null;
-    });
+  });
+
+  btn.addEventListener('click', async () => {
+    if (!installPromptEvent) {
+      alert(
+        '설치 다이얼로그가 이미 한 번 표시되었거나 만료되었습니다.\n' +
+          '브라우저 메뉴(⋮)에서 "앱 설치" 또는 "홈 화면에 추가"를 직접 선택해주세요.'
+      );
+      return;
+    }
+    installPromptEvent.prompt();
+    const choice = await installPromptEvent.userChoice;
+    installPromptEvent = null;
+    if (choice.outcome === 'accepted') {
+      btn.hidden = true;
+      status.hidden = false;
+      status.classList.add('installed');
+      status.textContent = '✓ 설치되었습니다. 홈 화면에서 실행하세요.';
+    } else {
+      // 사용자가 거부 - 안내 메시지로 직접 설치 방법 표시
+      btn.hidden = true;
+      guide.innerHTML =
+        '<p class="small">설치를 취소하셨습니다. 나중에 설치하려면 브라우저 메뉴 <kbd>⋮</kbd> → <strong>앱 설치</strong>를 이용하세요.</p>';
+    }
   });
 
   window.addEventListener('appinstalled', () => {
-    $('btn-install').hidden = true;
-    $('install-hint').textContent = '설치되었습니다.';
+    btn.hidden = true;
+    status.hidden = false;
+    status.classList.add('installed');
+    status.textContent = '✓ 설치되었습니다.';
+    installPromptEvent = null;
   });
 }
 
@@ -495,6 +634,7 @@ function init() {
       const target = b.dataset.nav;
       if (target === 'history') renderHistory();
       if (target === 'home') refreshNearby();
+      if (target === 'settings') updateCameraStatus();
       showView(target);
       stopCamera();
       $('camera-section').hidden = true;
@@ -554,8 +694,13 @@ function init() {
     $('key-saved').hidden = false;
     setTimeout(() => ($('key-saved').hidden = true), 1500);
   });
-  $('btn-clear-key').addEventListener('click', () => {
-    if (confirm('API 키를 삭제할까요?')) {
+  $('btn-clear-key').addEventListener('click', async () => {
+    const ok = await confirmModal({
+      title: 'API 키 삭제',
+      message: '저장된 Anthropic API 키를 삭제할까요? 이후 추출 기능을 사용하려면 다시 입력해야 합니다.',
+      okText: '삭제',
+    });
+    if (ok) {
       storage.clearApiKey();
       $('api-key-input').value = '';
     }
@@ -590,25 +735,21 @@ function init() {
     storage.setIface(e.target.value.trim());
   });
 
-  // ----- copy buttons (delegated) -----
-  document.body.addEventListener('click', (e) => {
+  // ----- copy + delegated actions -----
+  document.body.addEventListener('click', async (e) => {
     const t = e.target.closest('[data-copy], [data-copy-value], [data-action]');
     if (!t) return;
 
-    // textContent 복사
     if (t.dataset.copy) {
-      const target = $(t.dataset.copy);
-      navigator.clipboard.writeText(target.textContent);
+      navigator.clipboard.writeText($(t.dataset.copy).textContent);
       const old = t.textContent;
       t.textContent = '복사됨';
       setTimeout(() => (t.textContent = old), 1200);
       return;
     }
 
-    // input value 복사
     if (t.dataset.copyValue) {
-      const target = $(t.dataset.copyValue);
-      navigator.clipboard.writeText(target.value);
+      navigator.clipboard.writeText($(t.dataset.copyValue).value);
       const old = t.textContent;
       t.textContent = '복사됨';
       setTimeout(() => (t.textContent = old), 1200);
@@ -627,8 +768,18 @@ function init() {
         setTimeout(() => (t.textContent = old), 1200);
       }
     } else if (action === 'delete') {
-      storage.removeHistory(ts);
-      renderHistory();
+      const item = storage.getHistory().find((x) => x.ts === ts);
+      if (!item) return;
+      const label = item.label || item.ssid;
+      const ok = await confirmModal({
+        title: '기록 삭제',
+        message: `"${label}" 항목을 삭제할까요? 위치 정보와 라벨도 함께 사라집니다.`,
+        okText: '삭제',
+      });
+      if (ok) {
+        storage.removeHistory(ts);
+        renderHistory();
+      }
     } else if (action === 'reuse' || action === 'reuse-nearby') {
       reuseEntry(ts);
     } else if (action === 'share-entry') {
@@ -637,18 +788,25 @@ function init() {
   });
 
   // ----- clear history -----
-  $('btn-clear-history').addEventListener('click', () => {
-    if (confirm('전체 기록을 삭제할까요?')) {
+  $('btn-clear-history').addEventListener('click', async () => {
+    const count = storage.getHistory().length;
+    const ok = await confirmModal({
+      title: '전체 기록 삭제',
+      message: `저장된 ${count}개의 와이파이 기록을 모두 삭제할까요? 되돌릴 수 없습니다.`,
+      okText: '전체 삭제',
+    });
+    if (ok) {
       storage.clearHistory();
       renderHistory();
     }
   });
 
   renderHistory();
-  setupInstallPrompt();
+  setupInstallExperience();
+  updateCameraStatus();
   registerServiceWorker();
 
-  // ----- 진입 시 URL에 wifi 파라미터가 있으면 임포트, 아니면 홈 -----
+  // ----- 진입 시 공유 링크 처리 또는 홈 -----
   const imported = tryImportFromUrl();
   if (!imported) {
     showView('home');
@@ -657,7 +815,9 @@ function init() {
     if (!storage.getApiKey()) {
       setTimeout(() => {
         if (
-          confirm('Anthropic API 키가 설정되지 않았습니다. 지금 설정으로 이동할까요?')
+          confirm(
+            'Anthropic API 키가 설정되지 않았습니다. 지금 설정으로 이동할까요?'
+          )
         ) {
           showView('settings');
         }

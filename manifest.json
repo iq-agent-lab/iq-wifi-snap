@@ -1,6 +1,6 @@
 {
-  "name": "iq-wifi-snap",
-  "short_name": "wifi-snap",
+  "name": "Wifi Snap",
+  "short_name": "Wifi Snap",
   "description": "사진 한 장으로 와이파이 끝",
   "lang": "ko",
   "start_url": "./",

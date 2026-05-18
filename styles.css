@@ -1,5 +1,5 @@
 /* =====================================================
-   iq-wifi-snap · clean minimal · coral accent · v0.3
+   Wifi Snap · clean minimal · coral accent · v0.4
    ===================================================== */
 
 :root {
@@ -11,9 +11,11 @@
   --line: #e7e4dd;
   --line-strong: #d1cdc4;
   --accent: #cc785c;
+  --accent-dark: #a85d44;
   --accent-soft: #f5e6e0;
   --error: #b3361e;
   --ok: #2d7a3e;
+  --warn: #b8860b;
   --radius: 6px;
   --radius-lg: 10px;
 }
@@ -72,19 +74,30 @@ footer {
   border-top: 1px solid var(--line);
 }
 
-/* ===== Brand & Nav ===== */
+/* ===== Brand (new identity) ===== */
 .brand {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 500;
-  font-size: 0.95rem;
-  letter-spacing: -0.02em;
-  display: flex; align-items: center; gap: 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: 'Pretendard', sans-serif;
+  letter-spacing: -0.025em;
 }
-.dot {
-  width: 9px; height: 9px;
-  background: var(--accent);
-  border-radius: 50%;
+.brand-logo {
+  color: var(--accent);
+  flex-shrink: 0;
 }
+.brand-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.03em;
+}
+.brand-accent {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ===== Nav ===== */
 .nav { display: flex; gap: 0.15rem; }
 .nav button {
   background: none; border: none;
@@ -108,7 +121,7 @@ footer {
 .hero .accent { color: var(--accent); }
 .lead { font-size: 1rem; max-width: 30rem; margin-bottom: 2rem; }
 
-/* ===== Muted ===== */
+/* ===== Utility ===== */
 .muted { color: var(--muted); }
 .small { font-size: 0.82rem; line-height: 1.5; }
 
@@ -301,10 +314,8 @@ button.ghost-mini.regen:hover { background: var(--accent-soft); }
   font-size: 0.8rem;
 }
 
-/* ===== Inline editable SSID/PW ===== */
-.field.editable .value {
-  padding: 0.5rem 0.5rem 0.5rem 1rem;
-}
+/* inline edit */
+.field.editable .value { padding: 0.5rem 0.5rem 0.5rem 1rem; }
 .inline-edit {
   flex: 1;
   border: none;
@@ -317,9 +328,7 @@ button.ghost-mini.regen:hover { background: var(--accent-soft); }
   min-width: 0;
   width: 100%;
 }
-.inline-edit:focus {
-  outline: none;
-}
+.inline-edit:focus { outline: none; }
 .field.editable .value:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
@@ -421,7 +430,7 @@ button.ghost-mini.regen:hover { background: var(--accent-soft); }
   padding: 0.55rem 1rem;
 }
 
-/* ===== Command Blocks ===== */
+/* ===== Commands ===== */
 .cmd-block {
   margin: 0.5rem 0;
   border: 1px solid var(--line);
@@ -503,6 +512,55 @@ h3 {
 }
 .setting-block:last-child { border-bottom: none; }
 
+/* install / camera status badges */
+.install-status,
+.camera-status {
+  padding: 0.6rem 0.85rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+  font-size: 0.88rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.install-status.installed,
+.camera-status.granted {
+  background: #ecf5ee;
+  border-color: #c6e0cd;
+  color: var(--ok);
+}
+.camera-status.denied {
+  background: #fce8e3;
+  border-color: #f0c7ba;
+  color: var(--error);
+}
+.camera-status.prompt {
+  background: #fdf6e3;
+  border-color: #ead9a8;
+  color: var(--warn);
+}
+.install-guide {
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--muted);
+  margin-top: 0.5rem;
+}
+.install-guide strong { color: var(--fg); font-weight: 600; }
+.install-guide ol { padding-left: 1.4rem; margin: 0.5rem 0; }
+.install-guide li { margin-bottom: 0.3rem; }
+.install-guide kbd {
+  display: inline-block;
+  padding: 0.1em 0.45em;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88em;
+  margin: 0 0.15em;
+  color: var(--fg);
+}
+
 /* ===== History ===== */
 #history-list { margin-top: 1.25rem; }
 .history-item {
@@ -580,11 +638,7 @@ h3 {
 .error p { color: var(--fg); margin: 0.4rem 0 1rem; word-break: break-word; }
 .error button { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 
-.ok {
-  color: var(--ok);
-  font-size: 0.85rem;
-  font-weight: 500;
-}
+.ok { color: var(--ok); font-size: 0.85rem; font-weight: 500; }
 
 a {
   color: var(--accent);
@@ -598,6 +652,69 @@ a:hover { border-bottom-color: var(--accent); }
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.78em;
   color: var(--muted);
+}
+
+/* ===== Confirm Modal ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.15s ease-out;
+}
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.4);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.modal-content {
+  position: relative;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  animation: modalIn 0.18s ease-out;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-content h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+.modal-content p {
+  font-size: 0.92rem;
+  color: var(--muted);
+  margin-bottom: 1.25rem;
+  word-break: break-word;
+}
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.modal-actions button {
+  padding: 0.6rem 1.1rem;
+  font-size: 0.92rem;
+}
+.danger-btn {
+  background: var(--error);
+  color: white;
+  border-color: var(--error);
+}
+.danger-btn:hover {
+  background: #952f1a;
+  border-color: #952f1a;
+  color: white;
 }
 
 /* ===== Mobile ===== */
@@ -622,6 +739,7 @@ a:hover { border-bottom-color: var(--accent); }
     justify-content: flex-end;
     flex-wrap: wrap;
   }
+  .brand-text { font-size: 1rem; }
 }
 
 /* ===== Page-load animation ===== */

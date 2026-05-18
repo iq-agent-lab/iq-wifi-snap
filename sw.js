@@ -4,7 +4,7 @@
 //   - 외부 CDN (fonts, qrcode): cache-first
 //   - Anthropic API: network-only (캐시 절대 안 함)
 
-const CACHE = 'iq-wifi-snap-v0.3.0';
+const CACHE = 'iq-wifi-snap-v0.4.0';
 
 const SHELL = [
   './',
