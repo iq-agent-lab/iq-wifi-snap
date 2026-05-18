@@ -1,5 +1,5 @@
 /* =====================================================
-   Wifi Snap · clean minimal · coral accent · v0.10
+   Wifi Snap · clean minimal · coral accent · v0.11
    ===================================================== */
 
 :root {
@@ -618,6 +618,37 @@ code {
   padding-top: 0.75rem;
   border-top: 1px dashed var(--line);
   line-height: 1.6 !important;
+}
+
+/* wifi-snap:// 클릭 링크 (v0.11) */
+.ws-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.75rem 1.2rem;
+  background: var(--fg);
+  color: var(--bg) !important;
+  border: 1px solid var(--fg);
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 0.93rem;
+  text-decoration: none;
+  margin: 0.6rem 0 0.5rem;
+  transition: all 0.12s ease;
+  border-bottom-color: var(--fg) !important;
+}
+.ws-link:hover {
+  background: var(--accent);
+  border-color: var(--accent) !important;
+  color: white !important;
+}
+.ws-link-icon {
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--accent);
+}
+.ws-link:hover .ws-link-icon {
+  color: white;
 }
 
 .cli-bootstrap-note {

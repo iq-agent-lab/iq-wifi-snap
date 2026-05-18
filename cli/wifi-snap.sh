@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-VERSION="0.8.0"
+VERSION="0.11.0"
 REPO_URL="https://github.com/iq-agent-lab/iq-wifi-snap"
 
 # ============== colors ==============
@@ -39,11 +39,16 @@ ${C_BOLD}USAGE${C_RESET}
   wifi-snap help                    이 도움말
 
 ${C_BOLD}EXAMPLES${C_RESET}
-  ${C_DIM}# 공유 URL을 그대로 인자로${C_RESET}
+  ${C_DIM}# 공유 URL을 그대로 인자로 (https 또는 wifi-snap://)${C_RESET}
   wifi-snap "https://iq-agent-lab.github.io/iq-wifi-snap/?wifi=eyJzIjoi..."
+  wifi-snap "wifi-snap://?wifi=eyJzIjoi..."
 
   ${C_DIM}# 또는 직접${C_RESET}
   wifi-snap connect "Starbucks" "passw0rd"
+
+${C_BOLD}URL SCHEME${C_RESET}
+  v0.11 인스톨러가 OS에 ${C_CORAL}wifi-snap://${C_RESET} 스킴을 등록합니다.
+  이후 어디서든 wifi-snap:// 링크를 클릭하면 이 CLI가 자동 실행돼요.
 
 ${C_BOLD}ENVIRONMENT${C_RESET}
   WIFI_SNAP_IFACE=en0   macOS 네트워크 인터페이스 (기본 en0)
@@ -195,7 +200,7 @@ main() {
       (( $# >= 1 )) || die "SSID가 필요합니다. 예: wifi-snap connect \"카페\" \"비번\""
       cmd_connect "$1" "${2:-}"
       ;;
-    http://*|https://*)
+    http://*|https://*|wifi-snap://*)
       cmd_from_url "$arg1"
       ;;
     *)

@@ -47,6 +47,22 @@ wifi-snap decode "https://...?wifi=eyJ..."
 
 URL 안에 뭐가 들었는지 확인용. 친구가 보낸 링크를 검증하고 싶을 때.
 
+### URL 스킴 (v0.11+)
+
+인스톨러가 OS에 `wifi-snap://` URL 스킴 핸들러를 자동 등록합니다.
+이후 어디서든(브라우저·Slack·이메일·Notion) **`wifi-snap://?wifi=...` 링크를 클릭하면**
+별도 터미널 없이 자동으로 wifi-snap CLI가 실행되어 연결됩니다.
+
+**활용 흐름**:
+1. 폰에서 추출 → 결과 화면의 "이 와이파이로 즉시 연결" 링크 우클릭 → 링크 복사
+2. PC에서 카톡/AirDrop/Continuity 클립보드 등으로 받기
+3. 받은 링크 클릭 → 자동 실행
+
+**설치 위치별 동작**:
+- **macOS**: `~/Applications/WifiSnapHandler.app` (LaunchServices 등록) → 클릭 시 Terminal 자동 열림
+- **Linux**: `~/.local/share/applications/wifi-snap.desktop` (xdg-mime) → 터미널 자동 실행
+- **Windows**: `HKCU\Software\Classes\wifi-snap` 레지스트리 → PowerShell 창 자동 실행
+
 ### 도움말 / 버전
 
 ```bash

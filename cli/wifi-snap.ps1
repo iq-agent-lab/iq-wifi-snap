@@ -13,7 +13,7 @@ param(
     [string]$Arg2 = ""
 )
 
-$Version = "0.8.0"
+$Version = "0.11.0"
 $RepoUrl = "https://github.com/iq-agent-lab/iq-wifi-snap"
 
 function Show-Usage {
@@ -163,7 +163,7 @@ try {
             if (-not $Arg1) { throw "SSID가 필요합니다." }
             Connect-Wifi -Ssid $Arg1 -Password $Arg2; break
         }
-        '^https?://'                        { Cmd-FromUrl $Command; break }
+        '^(https?|wifi-snap)://' { Cmd-FromUrl $Command; break }
         default {
             if ($Command -match 'wifi=') {
                 Cmd-FromUrl $Command

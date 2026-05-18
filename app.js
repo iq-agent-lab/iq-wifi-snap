@@ -16,6 +16,7 @@ import {
 } from './lib/location.js';
 import {
   createShareUrl,
+  createWifiSnapUrl,
   parseShareUrl,
   shareViaSystem,
   downloadQR,
@@ -418,11 +419,19 @@ function renderQRAndCommands(r) {
 
   // CLI commands
   const shareUrl = createShareUrl(r);
+  const wsUrl = createWifiSnapUrl(r);
   $('cli-install-bash').textContent =
     'curl -sSL https://iq-agent-lab.github.io/iq-wifi-snap/cli/install.sh | bash';
   $('cli-install-ps').textContent =
     'iwr -useb https://iq-agent-lab.github.io/iq-wifi-snap/cli/install.ps1 | iex';
   $('cli-use').textContent = `wifi-snap "${shareUrl}"`;
+
+  // wifi-snap:// scheme link (v0.11)
+  const wsLink = $('ws-link-click');
+  if (wsLink) {
+    wsLink.href = wsUrl;
+  }
+  $('ws-link-url').textContent = wsUrl;
 }
 
 // ============ inline edit ============

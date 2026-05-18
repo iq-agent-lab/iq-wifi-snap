@@ -316,6 +316,18 @@
         <pre id="cli-use" class="mono"></pre>
         <button data-copy="cli-use">실행 명령 복사</button>
 
+        <p class="cli-step"><strong>2-bis. 또는 한 번 클릭으로 (v0.11+)</strong></p>
+        <p class="muted small" style="margin-top:0">
+          인스톨러가 OS에 <code>wifi-snap://</code> 스킴을 등록합니다. 아래 링크를 클릭하면 (Slack/이메일/Notion 등 어디든)
+          별도 터미널 없이 자동으로 wifi-snap이 실행되어 연결됩니다.
+        </p>
+        <a id="ws-link-click" class="ws-link" href="#">
+          <span class="ws-link-icon">▶</span>
+          <span class="ws-link-text">이 와이파이로 즉시 연결</span>
+        </a>
+        <pre id="ws-link-url" class="mono"></pre>
+        <button data-copy="ws-link-url">링크 복사</button>
+
         <p class="muted small cli-note">
           ※ <code>wifi-snap</code> CLI는 외부 서버 호출 없음. URL 안의 SSID/PW만 디코드해서
           OS별 와이파이 연결 명령(<code>networksetup</code> / <code>netsh</code> / <code>nmcli</code>)으로 변환합니다.
@@ -460,7 +472,7 @@
 </main>
 
 <footer>
-  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.10.0</span></span>
+  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.11.0</span></span>
 </footer>
 
 <!-- ============== CUSTOM CONFIRM MODAL ============== -->
