@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fafaf7">
+<title>iq-wifi-snap</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23cc785c'/%3E%3Ctext x='50%25' y='58%25' font-family='monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%23fafaf7'%3Ew%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="dot"></span>
+    <span>iq-wifi-snap</span>
+  </div>
+  <nav class="nav">
+    <button data-nav="home">홈</button>
+    <button data-nav="history">기록</button>
+    <button data-nav="settings">설정</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ============== HOME ============== -->
+<section data-view="home">
+  <h1 class="hero">사진 한 장으로<br><span class="accent">와이파이 끝.</span></h1>
+  <p class="muted lead">카페 와이파이 정보를 찍으면 SSID 추출 · QR 생성 · 데스크톱 명령어까지 한 번에.</p>
+
+  <div class="actions">
+    <button id="btn-camera" class="primary">카메라 열기</button>
+    <label class="secondary" for="file-input">파일 업로드</label>
+    <input type="file" id="file-input" accept="image/*" hidden>
+  </div>
+
+  <div id="camera-section" hidden class="camera">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="cam-actions">
+      <button id="btn-capture" class="primary">촬영</button>
+      <button id="btn-cancel-camera">취소</button>
+    </div>
+  </div>
+
+  <div class="hints">
+    <div class="hint">
+      <span class="hint-num">01</span>
+      <div>
+        <strong>찍거나 업로드</strong>
+        <p class="muted small">테이블 카드 · 스티커 · 메뉴판 · 영수증 모두 OK</p>
+      </div>
+    </div>
+    <div class="hint">
+      <span class="hint-num">02</span>
+      <div>
+        <strong>Claude가 추출</strong>
+        <p class="muted small">SSID와 비밀번호를 JSON으로 정확히 분리</p>
+      </div>
+    </div>
+    <div class="hint">
+      <span class="hint-num">03</span>
+      <div>
+        <strong>QR + 명령어</strong>
+        <p class="muted small">폰은 QR 스캔, 노트북은 한 줄 명령어 복사</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== RESULT ============== -->
+<section data-view="result" hidden>
+  <div id="result-loading">
+    <span class="spin"></span> 추출 중...
+  </div>
+
+  <div id="result-error" hidden class="error">
+    <strong>추출 실패</strong>
+    <p id="result-error-msg"></p>
+    <button data-nav="home">다시 시도</button>
+  </div>
+
+  <div id="result-data" hidden>
+    <div class="field">
+      <label>SSID</label>
+      <div class="value">
+        <span id="out-ssid" class="mono"></span>
+        <button data-copy="out-ssid">복사</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>비밀번호</label>
+      <div class="value">
+        <span id="out-pass" class="mono"></span>
+        <button data-copy="out-pass">복사</button>
+      </div>
+    </div>
+    <div class="meta">
+      <span>신뢰도 <strong id="out-conf"></strong></span>
+      <span id="out-notes" class="muted"></span>
+    </div>
+
+    <div class="qr-block">
+      <div id="qr-canvas"></div>
+      <p class="muted small">폰 카메라로 QR을 비추면 바로 접속됩니다 (iOS/Android 네이티브 지원).</p>
+    </div>
+
+    <details open class="cmd-block">
+      <summary><span class="os-icon">⌘</span> macOS</summary>
+      <pre id="cmd-macos" class="mono"></pre>
+      <div class="cmd-foot">
+        <button data-copy="cmd-macos">명령어 복사</button>
+        <p class="muted small">터미널에 붙여넣고 실행. <code>en0</code>이 아니면 <code>networksetup -listallhardwareports</code>로 확인.</p>
+      </div>
+    </details>
+
+    <details class="cmd-block">
+      <summary><span class="os-icon">⊞</span> Windows</summary>
+      <pre id="cmd-windows" class="mono"></pre>
+      <div class="cmd-foot">
+        <button data-copy="cmd-windows">명령어 복사</button>
+        <p class="muted small">관리자 권한 PowerShell에 붙여넣기.</p>
+      </div>
+    </details>
+
+    <details class="cmd-block">
+      <summary><span class="os-icon">🐧</span> Linux</summary>
+      <pre id="cmd-linux" class="mono"></pre>
+      <div class="cmd-foot">
+        <button data-copy="cmd-linux">명령어 복사</button>
+        <p class="muted small">NetworkManager 환경 기준 (<code>nmcli</code>).</p>
+      </div>
+    </details>
+
+    <button data-nav="home" class="ghost">← 처음으로</button>
+  </div>
+</section>
+
+<!-- ============== HISTORY ============== -->
+<section data-view="history" hidden>
+  <h2>기록</h2>
+  <p class="muted small">이 브라우저에 최근 50개까지 저장됩니다.</p>
+  <div id="history-list"></div>
+  <button id="btn-clear-history" class="ghost danger" hidden>전체 삭제</button>
+</section>
+
+<!-- ============== SETTINGS ============== -->
+<section data-view="settings" hidden>
+  <h2>설정</h2>
+
+  <div class="setting-block">
+    <h3>Anthropic API 키</h3>
+    <div class="field">
+      <input type="password" id="api-key-input" placeholder="sk-ant-...">
+    </div>
+    <div class="row">
+      <button id="btn-save-key" class="primary">저장</button>
+      <button id="btn-clear-key" class="ghost">삭제</button>
+      <span id="key-saved" hidden class="ok">저장됨</span>
+    </div>
+    <p class="muted small">키는 이 브라우저의 localStorage에만 저장됩니다. 서버로 전송되지 않습니다. 키 발급은 <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a>.</p>
+  </div>
+
+  <div class="setting-block">
+    <h3>모델</h3>
+    <div class="field">
+      <select id="model-select">
+        <option value="claude-haiku-4-5-20251001">Haiku 4.5 (빠르고 저렴, 권장)</option>
+        <option value="claude-sonnet-4-6">Sonnet 4.6 (더 정확, 비쌈)</option>
+      </select>
+    </div>
+    <p class="muted small">OCR 수준의 작업이라 Haiku로 충분합니다. 이상하게 추출되면 Sonnet으로 전환.</p>
+  </div>
+
+  <div class="setting-block">
+    <h3>네트워크 인터페이스 (macOS)</h3>
+    <div class="field">
+      <input type="text" id="iface-input" placeholder="en0">
+    </div>
+    <p class="muted small">기본 <code>en0</code>. M1/M2 Mac에서 dock 사용 시 <code>en7</code> 등일 수 있음.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a></span>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
