@@ -1,195 +1,136 @@
 # Wifi Snap
 
-> 사진 한 장으로 와이파이 끝. 카페·매장에서 와이파이 정보를 찍으면 **SSID 추출 → QR 코드 → 데스크톱 명령어 → 친구한테 링크 공유**까지 한 번에.
+> 사진 한 장으로 와이파이 끝.
 
-iq-agent-lab의 첫 번째 일상 유틸리티 에이전트. 정적 호스팅(GitHub Pages) · 백엔드 0 · BYO API key.
+[**Live →**](https://iq-agent-lab.github.io/iq-wifi-snap/) · [데스크톱 CLI](#-데스크톱-cli) · [로드맵](#-로드맵)
 
-**Live demo**: https://iq-agent-lab.github.io/iq-wifi-snap/
+카페·매장의 와이파이 카드를 사진으로 찍으면 **Claude Vision**이 SSID와 비밀번호를 자동으로 뽑아내고, **QR 코드 / 데스크톱 명령어 / 공유 링크 / PC 자동 연결**까지 한 번에 처리합니다. 백엔드 0, 사용자 본인 API 키로만 동작. 추출당 비용 ~$0.001.
 
----
+[`iq-agent-lab`](https://github.com/iq-agent-lab)의 첫 번째 일상 유틸리티 에이전트입니다.
 
-## 동작 방식
+<br>
 
-```
-[사진/업로드] ──▶ Claude Vision API ──▶ {ssid, password, security}
-                                          │
-                                          ├──▶ WiFi QR 생성 (폰 카메라로 스캔하면 자동 접속)
-                                          ├──▶ macOS/Windows/Linux 명령어 (복사해서 터미널 실행)
-                                          ├──▶ 위치(GPS)와 함께 기록 → 재방문 시 자동 복원
-                                          └──▶ 공유 링크 생성 → 친구도 API 키 없이 즉시 사용
-```
+## ✨ 무엇을 할 수 있나요
 
-- **순수 정적 웹앱 + PWA**: HTML/CSS/Vanilla JS · 빌드 단계 없음
-- **백엔드 없음**: 모든 처리는 브라우저에서. API 키는 localStorage에만 저장
-- **CORS**: `anthropic-dangerous-direct-browser-access: true` 헤더 활용
-- **모델**: Claude Haiku 4.5 기본 (저렴 · OCR 수준 충분), Sonnet 4.6 옵션
-- **PWA**: 홈 화면 설치 가능, 오프라인 셸 캐싱
-- **장소 기억**: GPS와 함께 저장, 100m 이내 재방문 시 자동 복원
-- **공유**: 카톡·메시지·AirDrop 등 시스템 공유 시트. 받는 사람은 API 키 없이 링크 클릭만으로 QR 확인.
+- **추출**: Claude Vision으로 카드·스티커·메뉴판·영수증에서 자동 인식
+- **오프라인 폴백**: Tesseract.js 한국어 OCR + 로컬 파서로 인터넷 없이도 추출
+- **QR + OS 명령어**: 폰 카메라용 WiFi QR, macOS / Windows / Linux 연결 명령어 한 줄
+- **공유**: 시스템 공유 시트(카톡/메시지/AirDrop), 카카오톡 SDK 직접 공유, base64 딥링크
+- **PC 자동 연결**: `wifi-snap` CLI (macOS · Linux · Windows). 한 번 설치로 한 줄 연결
+- **`wifi-snap://` URL 스킴**: 어디서든 링크 클릭만으로 CLI 자동 실행
+- **🔊 초음파 오디오 전송**: 인터넷·BT·페어링 없이 폰 스피커 → PC 마이크로 정보 전달
+- **속도 측정 + 지도**: Cloudflare speed test로 다운로드/지연 측정, Leaflet/OSM 카페별 지도
+- **위치 기억**: GPS로 카페별 자동 기록. 재방문 시 사진 없이 자동 복원
+- **PWA**: 홈 화면 설치, 오프라인 캐시. iOS 가이드 / Android 자동 install prompt
+- **인앱 브라우저 감지**: 카톡·인스타·네이버 등 WebView에서 외부 브라우저로 이동 안내
 
----
+<br>
 
-## 📸 테스트 예시
+## 🚀 빠른 시작
 
-`examples/` 폴더에 실제 카페에서 볼 법한 와이파이 정보 카드 3종이 들어있습니다. 추출 정확도 + 다양한 레이아웃 대응 테스트용.
+1. [console.anthropic.com](https://console.anthropic.com/)에서 API 키 발급 (`sk-ant-...`)
+2. [Wifi Snap 열기](https://iq-agent-lab.github.io/iq-wifi-snap/) → 우측 상단 **설정**
+3. **Anthropic API 키** 칸에 붙여넣고 **저장**
+4. 홈으로 돌아와서 **카메라 열기** → 와이파이 카드 촬영 → 끝
 
-### 사용 방법
+iOS Safari 또는 Android Chrome에서 **"홈 화면에 추가"** 하면 PWA로 깔리고 카메라/위치 권한도 더 안정적으로 유지됩니다.
 
-**A. 모니터에 띄워서 폰으로 촬영** — 앱의 "카메라 열기"로 인앱 촬영. 화면 반사 + 약간의 기울기까지 있어서 실제 카페 시뮬레이션에 가까움.
+> 💡 **첫 사용 팁**: 설정에서 **위치 기억** 켜두고, **오프라인 OCR**도 미리 다운로드해두면 카페에서 인터넷 없을 때도 추출 가능합니다 (~12MB, 한 번만).
 
-**B. 이미지 직접 업로드** — 앱의 "파일 업로드" 버튼으로 PNG 직접 전달. AI 추출 로직만 깔끔하게 테스트.
+<br>
 
-### Card 1 — 모던 카페 안내문 (난이도: 쉬움)
+## 📖 사용법
 
-<img src="./examples/card1-modern-cafe.png" alt="Card 1" width="320">
-
-- 깔끔한 인쇄물 스타일, 한글 라벨 `네트워크명` / `비밀번호`
-- 진한 코랄색 강조, monospace 폰트로 SSID/PW 분리
-- **정답**
-  - SSID: `moodboard_5G`
-  - PW: `coffee2024!`
-- **체크 포인트**
-  - SSID 끝의 `_5G` 누락 안 되는지
-  - PW 끝의 `!` 누락 안 되는지
-
-### Card 2 — 손글씨 메모지 (난이도: 중간)
-
-<img src="./examples/card2-handwritten.png" alt="Card 2" width="320">
-
-- 노란 포스트잇 컨셉, `ID :` / `PW :` 라벨
-- 전화번호 형식의 비밀번호 — 한국 카페에서 흔한 패턴 (사장님 휴대폰 번호를 그대로 사용)
-- **정답**
-  - SSID: `HALMUNI_CAFE`
-  - PW: `010-2345-6789`
-- **체크 포인트**
-  - `ID :` 를 SSID 라벨로 잘 매핑하는지
-  - 전화번호 형식을 SSID로 오인하지 않는지
-  - 하이픈(`-`) 그대로 보존하는지
-
-### Card 3 — 미니멀 다크 스티커 (난이도: 중간-어려움)
-
-<img src="./examples/card3-minimal-dark.png" alt="Card 3" width="400">
-
-- 어두운 배경 + 영문 `NETWORK` / `PASSWORD` 라벨
-- 특수문자(`#`)와 대소문자 혼용 PW
-- **정답**
-  - SSID: `Bluebottle_Guest`
-  - PW: `blue#bottle21`
-- **체크 포인트**
-  - 어두운 배경에서도 OCR 정확도 유지하는지
-  - `#` 같은 특수문자 누락 없이 가져오는지
-  - 대소문자 (`Bluebottle`) 정확히 보존하는지
-
-### 회귀 테스트 용도
-
-이 카드들은 단순 데모를 넘어 **추출 프롬프트의 회귀 테스트 픽스처** 역할도 합니다.
-
-- `lib/claude.js`의 프롬프트를 수정한 뒤 → 이 3개 카드를 모두 정확히 추출하는지 확인
-- 실사용에서 잘못 추출되는 케이스를 발견하면 → 그 사진을 `examples/`에 추가하고 프롬프트의 few-shot 예시 보강
-
----
-
-## 로컬에서 실행
-
-```bash
-cd iq-wifi-snap
-python3 -m http.server 8000
-# → http://localhost:8000
-```
-
-처음 접속 시 설정 → Anthropic API 키 등록 → 카메라 권한 허용.
-
-위치 기억 기능 쓰려면 설정 → "위치 기억" 토글 ON (위치 권한 요청됨).
-
-> 카메라/위치 API는 `localhost` 또는 HTTPS에서만 동작. GitHub Pages는 HTTPS라서 문제없음.
-
----
-
-## GitHub Pages 배포
-
-Settings → Pages → Source `Deploy from a branch` → `main` / `(root)`.
-
-배포 URL: **`https://iq-agent-lab.github.io/iq-wifi-snap/`**
-
----
-
-## 프로젝트 구조
+### 1) 카페에서 와이파이 잡기
 
 ```
-iq-wifi-snap/
-├── index.html          메인 UI
-├── styles.css          디자인 토큰 + 컴포넌트
-├── app.js              진입점 (카메라 · 업로드 · 공유 · PWA)
-├── manifest.json       PWA 매니페스트
-├── sw.js               서비스 워커
-├── icons/              PNG 아이콘 + SVG 원본
-├── examples/           ⭐ 테스트용 와이파이 카드 이미지
-├── cli/                ⭐ 데스크톱 컴패니언 (v0.8)
-│   ├── wifi-snap.sh    bash 스크립트 (macOS · Linux)
-│   ├── wifi-snap.ps1   PowerShell (Windows)
-│   ├── install.sh      한 줄 설치 (bash)
-│   ├── install.ps1     한 줄 설치 (PowerShell)
-│   └── README.md
-└── lib/
-    ├── claude.js       Anthropic API + 추출 프롬프트
-    ├── wifi.js         WiFi QR 문자열 + OS 명령어
-    ├── location.js     GPS + Haversine 거리
-    ├── share.js        공유 URL + Web Share API + QR PNG
-    ├── kakao.js        Kakao JS SDK 동적 로딩 + 공유
-    ├── ocr.js          Tesseract.js 동적 로딩 + 워커 관리
-    ├── parser.js       OCR 텍스트 → SSID/PW 로컬 파서
-    ├── env.js          브라우저/인앱/플랫폼 환경 감지
-    ├── speedtest.js    Cloudflare speed test (다운로드/지연시간)
-    ├── map.js          Leaflet + OpenStreetMap 지도 렌더
-    ├── audio.js        ggwave 오디오 송수신 (v0.12)
-    └── storage.js      localStorage 래퍼
+홈 화면 → 카메라 열기 → 카드 촬영 → 결과 화면
+   ↓
+SSID / 비밀번호 / QR 코드 / 신뢰도 표시
+   ↓
+폰 카메라로 QR 비추면 즉시 접속
 ```
 
----
+추출이 이상하게 됐으면 SSID/PW 칸을 직접 수정 → "QR 갱신" 버튼으로 다시 만들 수 있어요.
 
-## 사용 흐름
+### 2) 친구한테 공유
 
-### 처음 카페 방문
-1. 홈 화면 아이콘 탭 (PWA 설치한 경우)
-2. **카메라 열기** → 와이파이 정보 촬영
-3. SSID/PW 추출 → 결과 화면
-4. (필요 시) SSID/PW 직접 수정 → **QR 갱신** 버튼
-5. **공유** 버튼 → 친구한테 카톡으로 전송, 또는
-6. **QR 저장** → 이미지 파일로 다운로드, 또는
-7. 폰: QR 비추기, 노트북: 명령어 복사 후 터미널 실행
+결과 화면에서:
 
-### 같은 카페 재방문
-1. 앱 열기 → 상단에 "근처에서 사용했던 와이파이" 자동 표시 → 탭
+- **공유** — 시스템 공유 시트 (카톡/메시지/AirDrop/Slack 등)
+- **카톡** — 카카오톡 SDK로 카드형 공유 (설정에서 JS 키 등록 시 노출)
+- **링크 복사** — `https://iq-agent-lab.github.io/iq-wifi-snap/?wifi=...` 형태의 base64 딥링크
+- **QR 저장** — QR을 PNG 파일로 저장
 
-### 친구가 공유받은 링크 열기
-1. 카톡에서 링크 클릭
-2. 자동으로 결과 화면 + "📨 공유받은 와이파이 정보예요" 배너
-3. QR 비추기 → 접속
+받은 사람은 링크 클릭만 하면 별도 추출 없이 즉시 QR을 봅니다. API 키도 필요 없음.
 
----
+### 3) 노트북도 같은 와이파이 접속
 
-## 공유 링크 형식
+상황별로 5가지 방법. **굵게** 표시된 게 가장 추천:
+
+| 방법 | 인터넷 필요? | 사전 준비 | 소요 시간 |
+|---|---|---|---|
+| 직접 타이핑 | 없음 | 없음 | ~30초 |
+| **🔊 오디오 전송** | **없음** | **PWA + CLI** | **~10초** |
+| 폰 핫스팟 5초 + CLI | 폰 cellular | wifi-snap CLI | ~15초 |
+| Kakao/AirDrop + CLI | 폰 cellular | wifi-snap CLI | ~10초 |
+| **`wifi-snap://` 클릭** | 전달 방법에 따라 | **CLI + URL 스킴** | **~5초** |
+
+**🔊 오디오 전송이 가장 짜릿한 흐름** (인터넷 0 상태에서 동작):
 
 ```
-https://iq-agent-lab.github.io/iq-wifi-snap/?wifi=<base64>
+폰 (셀룰러)                              PC (완전 오프라인)
+─────────                                ────────────────
+와이파이 카드 촬영                       ┃ Wifi Snap PWA 열기 (캐시됨)
+   ↓                                    ┃   ↓
+결과 화면                                ┃ "🎧 소리로 받기" 클릭
+   ↓                                    ┃   ↓
+"🔊 소리로 전송" 클릭                    ┃ 받기 시작 (마이크 권한)
+   ↓                                    ┃   ↓
+~~~~ 띠리리리 ~~~~                ──────→  PC 마이크 캡처 + 디코드
+                                        ┃   ↓
+                                        ┃ 결과 화면 자동 표시
+                                        ┃   ↓
+                                        ┃ "이 와이파이로 즉시 연결" 클릭
+                                        ┃   ↓
+                                        ┃ ✓ Terminal 자동 열림 → 연결
 ```
 
-base64 안에 SSID/PW/security만 들어있어서 받는 사람 데이터로는 0바이트만 소비. 본인 API 키 없어도 작동. 공유받은 정보는 받는 사람의 history에 자동 저장되지 않음.
+폰을 PC 옆에 두고 버튼만 누르면 약 2초 소리 → PC가 알아서 처리. 인터넷·블루투스·페어링·QR 다 필요 없음.
 
----
+### 4) 오프라인 모드 (인터넷 없는 카페)
 
-## 보안 메모
+카페에 가기 **전에** 한 번 준비:
 
-- API 키는 본인 브라우저 localStorage에만. 서버 전송 없음.
-- 위치 좌표도 localStorage에만 저장. 외부 전송 없음.
-- **공유 링크는 와이파이 비밀번호를 그대로 포함하므로**, 신뢰하는 사람한테만 보내세요.
-- 이 사이트 URL 자체를 공개적으로 공유하지 마세요 (API 키는 본인 브라우저에만 있어서 안전하긴 하지만, 브라우저 콘솔로 추출은 가능).
+1. **설정 → 오프라인 OCR** 토글 ON
+2. **"오프라인 데이터 다운로드"** 버튼 (한국어+영어 모델 ~12MB)
+3. "✓ 준비 완료" 확인
 
----
+이후 카페에서 인터넷이 없으면:
+- Claude API 호출 자동 실패 감지
+- "인터넷이 없어요. 오프라인 OCR로 전환합니다..." 메시지
+- Tesseract.js로 인식 + 로컬 파서로 SSID/PW 추출
+- 결과 화면에 `엔진 Tesseract (오프라인)` 노란 뱃지 표시
 
-## 💻 데스크톱 자동 연결 (v0.8)
+정확도는 Claude보다 낮으므로 결과 확인 후 직접 수정이 필요할 수 있습니다.
 
-폰에서 추출한 와이파이를 PC에서도 한 줄로 적용. 백엔드 0, 외부 서버 호출 0.
+### 5) 속도 측정 + 카페 지도
+
+**결과 화면 → "📶 속도 측정 → 지금 측정"**
+- Cloudflare 공개 엔드포인트로 다운로드 5MB + 지연시간 측정 (~6-10초)
+- 다운로드 Mbps / 지연시간 ms / 평가(쾌적·양호·보통·느림)
+- 자동으로 기록에 저장
+
+**지도 탭**
+- Leaflet + OpenStreetMap으로 위치 기억된 카페 핀 표시
+- 핀 탭 → SSID·속도·날짜 팝업
+- 등급별 색상으로 한눈에 어디가 빠른지 확인
+
+<br>
+
+## 💻 데스크톱 CLI
+
+> 자세한 문서 → [cli/README.md](./cli/README.md)
 
 ### 설치 (한 번만)
 
@@ -203,40 +144,171 @@ curl -sSL https://iq-agent-lab.github.io/iq-wifi-snap/cli/install.sh | bash
 iwr -useb https://iq-agent-lab.github.io/iq-wifi-snap/cli/install.ps1 | iex
 ```
 
+자동으로 둘 다 설치됩니다:
+- `wifi-snap` 명령어
+- **`wifi-snap://` URL 스킴 핸들러** (macOS `.app` / Linux `.desktop` / Windows 레지스트리)
+
 ### 사용
 
-폰에서 추출 → "링크 복사" → 본인 카톡/메모로 → PC 터미널에:
 ```bash
+# 공유 URL을 그대로 인자로 (https 또는 wifi-snap://)
 wifi-snap "https://iq-agent-lab.github.io/iq-wifi-snap/?wifi=eyJzIjoi..."
-```
+wifi-snap "wifi-snap://?wifi=eyJzIjoi..."
 
-또는 SSID/PW 직접:
-```bash
+# 또는 직접
 wifi-snap connect "Starbucks" "passw0rd"
+
+# 디코드만 (연결 안 함, 검증용)
+wifi-snap decode "https://...?wifi=..."
 ```
 
-자세히: [cli/README.md](./cli/README.md)
+설치 후엔 어디서든(Slack·이메일·Notion 등) `wifi-snap://` 링크를 **클릭만 해도** 자동으로 Terminal이 열리고 연결됩니다.
 
----
+### 동작
 
-## 로드맵
+CLI는 외부 서버 호출 없음. URL의 base64 페이로드만 디코드해서 OS별 명령으로 변환:
 
-- [x] **v0.1** — 사진 → 추출 → QR + 명령어
-- [x] **v0.2** — PWA화, GPS 위치 기억, 라벨링
-- [x] **v0.3** — 공유 (Web Share API + 딥링크), QR PNG 다운로드, 수동 편집
-- [x] **v0.3.1** — 테스트 예시 이미지 추가 (examples/)
-- [x] **v0.4** — 브랜드 리디자인 (Wifi Snap), 새 로고, 커스텀 삭제 확인, 카메라 권한 상태 표시
-- [x] **v0.5** — 🐛 [hidden] CSS 충돌 버그 픽스, 카카오톡 직접 공유, 캡티브 포털 보조
+| OS | 사용 도구 | 권한 |
+|---|---|---|
+| macOS | `networksetup -setairportnetwork` | 일반 |
+| Linux | `nmcli dev wifi connect` | 일반 (NetworkManager) |
+| Windows | `netsh wlan add profile` + `connect` | 일반 |
+
+<br>
+
+## 🔐 프라이버시
+
+- **Anthropic API 키**: 브라우저 localStorage에만. 우리 서버로 전송 안 함.
+- **추출한 이미지**: Anthropic API로만 전송. 우리 서버 없음 (애초에 백엔드 0).
+- **위치 정보**: 옵션. 활성화 시 브라우저 localStorage에만 저장.
+- **추출 기록**: 최근 50개까지 브라우저 localStorage. 클라우드 동기화 없음.
+- **분석/추적**: 0. 로그 0. 쿠키 0.
+- **CLI**: 외부 서버 호출 0. URL 디코드 + OS 명령만.
+- **오디오 전송**: P2P (스피커 → 마이크). 외부 네트워크 통과 안 함.
+
+브라우저 데이터를 지우면 모든 기록이 사라집니다. 백업이 필요하면 직접 localStorage를 export 하세요.
+
+<br>
+
+## 💰 비용
+
+| 구성 요소 | 비용 |
+|---|---|
+| Claude Haiku 4.5 (이미지 입력) | **~$0.001 / 추출** |
+| GitHub Pages | $0 |
+| Cloudflare speed test | $0 |
+| OpenStreetMap 타일 | $0 |
+| ggwave (오디오) | $0 |
+| Tesseract.js (OCR) | $0 |
+| Leaflet (지도) | $0 |
+| Kakao SDK (옵션) | $0 (앱 등록 무료) |
+
+월 100회 추출해도 약 $0.10. **유일한 비용은 본인의 Anthropic API key.**
+
+<br>
+
+## 🏗️ 구조
+
+```
+iq-wifi-snap/
+├── index.html          UI 마크업
+├── styles.css          스타일 (코랄 액센트 #cc785c)
+├── app.js              메인 진입점, 모든 화면 라우팅
+├── manifest.json       PWA 매니페스트
+├── sw.js               서비스 워커 (앱 셸 캐시)
+├── README.md           이 파일
+├── LICENSE             MIT
+│
+├── icons/              아이콘 (favicon 3종 + Apple touch 3종 + PWA 3종 + maskable)
+├── examples/           테스트용 와이파이 카드 이미지 3종
+│
+├── cli/                데스크톱 컴패니언 (v0.8+)
+│   ├── wifi-snap.sh    bash 스크립트 (macOS · Linux)
+│   ├── wifi-snap.ps1   PowerShell (Windows)
+│   ├── install.sh      한 줄 설치 (URL 스킴 핸들러 포함)
+│   ├── install.ps1     한 줄 설치 (Windows)
+│   └── README.md
+│
+└── lib/                모듈
+    ├── claude.js       Anthropic API + 추출 프롬프트
+    ├── wifi.js         WiFi QR 문자열 + OS 명령어 생성
+    ├── location.js     GPS + Haversine 거리
+    ├── share.js        공유 URL (base64) + Web Share API + QR PNG
+    ├── kakao.js        Kakao JS SDK 동적 로딩
+    ├── ocr.js          Tesseract.js 동적 로딩
+    ├── parser.js       OCR 텍스트 → SSID/PW 로컬 파서
+    ├── env.js          브라우저/인앱/플랫폼 환경 감지
+    ├── speedtest.js    Cloudflare speed test
+    ├── map.js          Leaflet + OpenStreetMap 지도
+    ├── audio.js        ggwave 오디오 송수신 (v0.12)
+    └── storage.js      localStorage 래퍼
+```
+
+전부 vanilla JS (no React/Vue/build step). ES modules로 직접 import.
+
+<br>
+
+## 🌐 브라우저 호환성
+
+| 기능 | 지원 |
+|---|---|
+| 추출 (사진 → SSID) | Chrome · Edge · Safari (iOS 16+) · Firefox |
+| PWA 설치 | Chrome · Edge · Safari (iOS 16.4+) |
+| 카메라 | 모두 (HTTPS 필수) |
+| 위치 | 모두 (HTTPS 필수) |
+| 오디오 송수신 | Chrome · Edge · Safari (iOS 14.5+) · Firefox |
+| 오프라인 OCR (WebAssembly) | 모두 |
+| 시스템 공유 시트 | iOS Safari · Android Chrome · 모바일 일반 |
+| `wifi-snap://` URL 스킴 | OS별 핸들러 설치 시 모든 OS |
+
+**인앱 브라우저** (카톡·인스타·페이스북·네이버 등)는 권한이 불안정해서 자동 감지 후 외부 브라우저 이동 안내가 뜹니다.
+
+<br>
+
+## 🛠️ 개발
+
+로컬에서 실행하려면 정적 서버만 띄우면 됩니다 (file:// 는 SW/모듈 제약 때문에 안 됨):
+
+```bash
+git clone https://github.com/iq-agent-lab/iq-wifi-snap
+cd iq-wifi-snap
+python3 -m http.server 8000
+# → http://localhost:8000
+```
+
+빌드 단계 없음. 파일 수정 → 새로고침.
+
+서비스 워커 캐시 때문에 변경이 안 보이면:
+- 데스크톱: DevTools → Application → Service Workers → "Unregister"
+- 모바일 PWA: 잠시 백그라운드 → 다시 열기
+
+<br>
+
+## 🗺️ 로드맵
+
+- [x] **v0.1** — 사진 → 추출 → QR + OS 명령어
+- [x] **v0.2** — PWA, GPS 위치 기억, 라벨링
+- [x] **v0.3** — 공유 URL 딥링크, Web Share API, QR PNG 저장, 인라인 편집
+- [x] **v0.4** — 브랜드 "Wifi Snap", 커스텀 삭제 확인, 카메라 권한 상태 표시
+- [x] **v0.5** — 🐛 `[hidden]` CSS 충돌 픽스, 카카오톡 SDK 공유, 캡티브 포털 보조
 - [x] **v0.6** — 온디바이스 OCR 폴백 (Tesseract.js + 로컬 파서)
-- [x] **v0.7** — 사용성 정리. 인앱 브라우저 감지+안내, 위치 권한 흐름 개선
-- [x] **v0.8** — 데스크톱 컴패니언 CLI. macOS/Linux/Windows에 한 줄 설치
-- [x] **v0.9** — 아이콘 재디자인(레퍼런스 앱 스타일), favicon 사이즈 확장, CLI 부트스트랩 정직 안내
-- [x] **v0.10** — 자동 속도 측정 (Cloudflare) + 카페별 지도 (Leaflet/OSM)
-- [x] **v0.11** — wifi-snap:// 커스텀 URL 스킴. 인스톨러가 OS에 핸들러 등록
-- [x] **v0.12** — 초음파/오디오 전송 (ggwave). 인터넷·BT·페어링·QR 없이 폰 스피커 → PC 마이크로 와이파이 정보 전달. 진정한 무연결 폰→PC.
+- [x] **v0.7** — 인앱 브라우저 감지, 위치 권한 흐름 개선, OCR 사전 다운로드 안내
+- [x] **v0.8** — 데스크톱 CLI (`wifi-snap`, macOS/Linux/Windows)
+- [x] **v0.9** — 아이콘 재디자인 (레퍼런스 앱 스타일), favicon 사이즈 확장
+- [x] **v0.10** — 자동 속도 측정 (Cloudflare) + 카페 지도 (Leaflet/OSM)
+- [x] **v0.11** — `wifi-snap://` 커스텀 URL 스킴 (어디서든 클릭만으로 CLI)
+- [x] **v0.12** — 초음파 오디오 전송 (ggwave). 진정한 무연결 폰→PC
 
----
+핵심 기능은 v0.12에서 완성. 이후엔 사용 피드백 기반 폴리시 위주로 갈 예정.
 
-## License
+<br>
 
-MIT
+## 🤝 만든 사람
+
+**IQ** (한동희) · [`@e9ua1`](https://github.com/e9ua1)
+
+[`iq-agent-lab`](https://github.com/iq-agent-lab) 조직의 첫 번째 일상 유틸리티 에이전트.
+
+## 📜 라이센스
+
+[MIT](./LICENSE)
