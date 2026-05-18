@@ -21,6 +21,7 @@ import {
   downloadQR,
   buildShareText,
 } from './lib/share.js';
+import { shareToKakao, looksLikeKakaoKey } from './lib/kakao.js';
 
 // ============ helpers ============
 const $ = (id) => document.getElementById(id);
@@ -285,6 +286,7 @@ function renderResult(r) {
 
   $('btn-regen-qr').hidden = true;
 
+  updateKakaoButtonVisibility();
   renderQRAndCommands(r);
 }
 
@@ -376,6 +378,51 @@ async function handleShare() {
   } else {
     alert('공유에 실패했습니다.');
   }
+}
+
+async function handleShareKakao() {
+  if (!currentResult) return;
+  const jsKey = storage.getKakaoKey();
+  if (!jsKey) {
+    alert('설정에서 Kakao JS 앱 키를 먼저 등록하세요.');
+    showView('settings');
+    return;
+  }
+
+  const url = createShareUrl(currentResult);
+  const title = currentResult.label
+    ? `${currentResult.label} 와이파이`
+    : '와이파이 정보 도착';
+  const description = currentResult.password
+    ? `SSID: ${currentResult.ssid}\n비밀번호: ${currentResult.password}\n\n탭하면 QR이 떠요.`
+    : `SSID: ${currentResult.ssid}\n\n탭하면 QR이 떠요.`;
+  // GitHub Pages 절대 경로 (Kakao는 imageUrl에 절대 URL 필요)
+  const imageUrl = new URL('icons/icon-512.png', window.location.href).toString();
+
+  try {
+    await shareToKakao({
+      jsKey,
+      title,
+      description,
+      url,
+      imageUrl,
+      buttonLabel: '와이파이 접속하기',
+    });
+    flashFeedback('카톡 공유창을 열었습니다');
+  } catch (e) {
+    let msg = e.message;
+    if (/invalid|domain|app key/i.test(msg)) {
+      msg +=
+        '\n\nKakao Developers에서 이 사이트 도메인을 플랫폼 → Web에 등록했는지 확인해주세요.';
+    }
+    alert('카톡 공유 실패: ' + msg);
+  }
+}
+
+function updateKakaoButtonVisibility() {
+  const has = !!storage.getKakaoKey();
+  const btn = document.getElementById('btn-share-kakao');
+  if (btn) btn.hidden = !has;
 }
 
 async function handleCopyShareLink() {
@@ -673,6 +720,7 @@ function init() {
 
   // ----- share buttons -----
   $('btn-share').addEventListener('click', handleShare);
+  $('btn-share-kakao').addEventListener('click', handleShareKakao);
   $('btn-share-link').addEventListener('click', handleCopyShareLink);
   $('btn-download-qr').addEventListener('click', handleDownloadQR);
 
@@ -710,6 +758,37 @@ function init() {
   $('model-select').value = storage.getModel();
   $('model-select').addEventListener('change', (e) => {
     storage.setModel(e.target.value);
+  });
+
+  // ----- settings: kakao key -----
+  $('kakao-key-input').value = storage.getKakaoKey();
+  $('btn-save-kakao').addEventListener('click', () => {
+    const v = $('kakao-key-input').value.trim();
+    if (v && !looksLikeKakaoKey(v)) {
+      if (
+        !confirm(
+          'Kakao JS 앱 키는 보통 32자 영숫자입니다. 입력하신 값이 형식과 달라 보이는데 그래도 저장할까요?'
+        )
+      ) {
+        return;
+      }
+    }
+    storage.setKakaoKey(v);
+    $('kakao-saved').hidden = false;
+    setTimeout(() => ($('kakao-saved').hidden = true), 1500);
+    updateKakaoButtonVisibility();
+  });
+  $('btn-clear-kakao').addEventListener('click', async () => {
+    const ok = await confirmModal({
+      title: 'Kakao 앱 키 삭제',
+      message: '저장된 Kakao JS 앱 키를 삭제할까요? 이후 카톡 공유 버튼이 사라지고, 시스템 공유 시트만 사용할 수 있습니다.',
+      okText: '삭제',
+    });
+    if (ok) {
+      storage.clearKakaoKey();
+      $('kakao-key-input').value = '';
+      updateKakaoButtonVisibility();
+    }
   });
 
   // ----- settings: location toggle -----

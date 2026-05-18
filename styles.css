@@ -1,5 +1,5 @@
 /* =====================================================
-   Wifi Snap · clean minimal · coral accent · v0.4
+   Wifi Snap · clean minimal · coral accent · v0.5
    ===================================================== */
 
 :root {
@@ -21,6 +21,12 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* 🔴 중요: [hidden] HTML 속성이 display:flex 등 클래스 스타일에 밀리지 않도록 강제.
+   이게 없으면 .modal[hidden], .shared-banner[hidden] 등이 페이지 로드 시 보임. */
+[hidden] {
+  display: none !important;
+}
 
 html, body {
   background: var(--bg);
@@ -428,6 +434,32 @@ button.ghost-mini.regen:hover { background: var(--accent-soft); }
 .qr-actions button {
   font-size: 0.88rem;
   padding: 0.55rem 1rem;
+}
+
+/* 카톡 버튼 */
+#btn-share-kakao {
+  background: #fee500;
+  border-color: #fee500;
+  color: #3a1d1d;
+  font-weight: 600;
+}
+#btn-share-kakao:hover {
+  background: #fdd800;
+  border-color: #fdd800;
+  color: #3a1d1d;
+}
+
+/* 캡티브 포털 보조 */
+.captive-helper {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--line);
+  text-align: center;
+  width: 100%;
+}
+.captive-helper a {
+  color: var(--accent);
+  font-weight: 500;
 }
 
 /* ===== Commands ===== */

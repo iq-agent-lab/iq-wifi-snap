@@ -156,10 +156,15 @@
       <p class="muted small">폰 카메라로 QR을 비추면 바로 접속됩니다.</p>
       <div class="qr-actions">
         <button id="btn-share" class="primary">공유</button>
+        <button id="btn-share-kakao" hidden>카톡</button>
         <button id="btn-share-link">링크 복사</button>
         <button id="btn-download-qr">QR 저장</button>
       </div>
       <p id="share-feedback" hidden class="ok small"></p>
+      <p class="captive-helper muted small">
+        연결됐는데 인터넷이 안 되나요?
+        <a href="http://neverssl.com" target="_blank" rel="noopener noreferrer">포털 페이지 열기 ↗</a>
+      </p>
     </div>
 
     <details open class="cmd-block">
@@ -230,6 +235,28 @@
   </div>
 
   <div class="setting-block">
+    <h3>카카오톡 공유 (선택)</h3>
+    <div class="field">
+      <input type="text" id="kakao-key-input" placeholder="JS 앱 키 (32자 영숫자)">
+    </div>
+    <div class="row">
+      <button id="btn-save-kakao" class="primary">저장</button>
+      <button id="btn-clear-kakao" class="ghost">삭제</button>
+      <span id="kakao-saved" hidden class="ok">저장됨</span>
+    </div>
+    <p class="muted small">
+      설정하면 결과 화면에 "카톡" 공유 버튼이 나타나고, 썸네일·버튼이 포함된 깔끔한 공유 카드로 전송됩니다.
+      설정 안 해도 일반 "공유" 버튼으로 카톡 전송 가능합니다(시스템 공유 시트 경유).<br><br>
+      <strong>키 발급 절차:</strong><br>
+      1. <a href="https://developers.kakao.com/console/app" target="_blank" rel="noopener">Kakao Developers</a>에서 앱 생성<br>
+      2. <strong>앱 설정 → 플랫폼 → Web</strong> 에 사이트 도메인 등록<br>
+      &nbsp;&nbsp;&nbsp;(<code>https://iq-agent-lab.github.io</code>)<br>
+      3. <strong>제품 설정 → 카카오톡 공유</strong> 활성화<br>
+      4. <strong>앱 키 → JavaScript 키</strong>를 위 칸에 붙여넣기
+    </p>
+  </div>
+
+  <div class="setting-block">
     <h3>위치 기억</h3>
     <label class="toggle">
       <input type="checkbox" id="loc-toggle">
@@ -263,7 +290,7 @@
 </main>
 
 <footer>
-  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.4.0</span></span>
+  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.5.0</span></span>
 </footer>
 
 <!-- ============== CUSTOM CONFIRM MODAL ============== -->
