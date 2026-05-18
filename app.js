@@ -28,6 +28,14 @@ import { parseFromText } from './lib/parser.js';
 import { env, canDeepLinkOutOfInApp, openInExternalBrowser } from './lib/env.js';
 import { measureSpeed, speedTier, speedTierLabel } from './lib/speedtest.js';
 import { renderMap } from './lib/map.js';
+import {
+  transmit,
+  encodeWifiPayload,
+  parseWifiPayload,
+  startReceiving,
+  stopReceiving,
+  isReceiving,
+} from './lib/audio.js';
 
 // ============ helpers ============
 const $ = (id) => document.getElementById(id);
@@ -652,6 +660,125 @@ function resetSpeedUi(r) {
   }
 }
 
+// ============ audio transmit (v0.12) ============
+
+async function handleTransmitAudio() {
+  if (!currentResult) return;
+  const btn = $('btn-transmit-audio');
+  const panel = $('transmit-progress');
+  const fill = $('transmit-bar-fill');
+
+  btn.disabled = true;
+  panel.hidden = false;
+  fill.style.width = '0%';
+
+  const payload = encodeWifiPayload({
+    ssid: currentResult.ssid,
+    password: currentResult.password,
+    security: currentResult.security,
+    label: currentResult.label || '',
+  });
+
+  try {
+    await transmit(payload, {
+      onProgress: (p) => {
+        fill.style.width = Math.round(p * 100) + '%';
+      },
+    });
+    fill.style.width = '100%';
+    setTimeout(() => {
+      panel.hidden = true;
+      btn.disabled = false;
+      flashFeedback('✓ 송신 완료');
+    }, 600);
+  } catch (e) {
+    panel.hidden = true;
+    btn.disabled = false;
+    alert('송신 실패: ' + e.message);
+  }
+}
+
+// ============ audio receive (v0.12) ============
+
+function showReceiveState(state) {
+  for (const s of ['idle', 'listening', 'success', 'error']) {
+    $('receive-' + s).hidden = s !== state;
+  }
+}
+
+function openReceivePanel() {
+  $('receive-section').hidden = false;
+  showReceiveState('idle');
+  // 카메라가 열려있다면 닫기
+  stopCamera();
+  $('camera-section').hidden = true;
+  $('receive-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function closeReceivePanel() {
+  if (isReceiving()) stopReceiving();
+  $('receive-section').hidden = true;
+}
+
+async function startAudioReceive() {
+  try {
+    showReceiveState('listening');
+    $('mic-level-fill').style.width = '0%';
+
+    await startReceiving({
+      onMessage: (text) => {
+        const parsed = parseWifiPayload(text);
+        if (!parsed) return; // 우리 페이로드 아님 — 무시
+
+        // 받음!
+        stopReceiving();
+        showReceiveState('success');
+
+        // 위치는 받지 않음. 라벨이 있으면 사용.
+        const saved = storage.addHistory({
+          ssid: parsed.ssid,
+          password: parsed.password,
+          security: parsed.security,
+          location: null,
+        });
+        currentResultTs = saved.ts;
+
+        setTimeout(() => {
+          $('receive-section').hidden = true;
+          renderResult({
+            ssid: parsed.ssid,
+            password: parsed.password,
+            security: parsed.security,
+            label: parsed.label || saved.label,
+            confidence: 'high',
+            notes: '오디오 수신',
+            location: null,
+            _shared: false,
+            _engine: 'audio',
+          });
+          showView('result');
+        }, 1000);
+      },
+      onLevel: (level) => {
+        // level은 보통 0~0.05 정도. 100배로 시각화
+        const pct = Math.min(100, level * 2000);
+        $('mic-level-fill').style.width = pct + '%';
+      },
+      onError: () => {
+        /* 디코드 에러는 무시 (계속 시도) */
+      },
+    });
+  } catch (e) {
+    showReceiveState('error');
+    $('receive-error-msg').textContent = e.message;
+  }
+}
+
+function stopAudioReceive() {
+  if (isReceiving()) stopReceiving();
+  showReceiveState('idle');
+}
+
 // ============ nearby ============
 async function refreshNearby() {
   const section = $('nearby-section');
@@ -991,6 +1118,8 @@ function init() {
       showView(target);
       stopCamera();
       $('camera-section').hidden = true;
+      if (isReceiving()) stopReceiving();
+      $('receive-section').hidden = true;
     });
   });
 
@@ -1032,6 +1161,14 @@ function init() {
 
   // ----- speed test -----
   $('btn-measure-speed').addEventListener('click', handleMeasureSpeed);
+
+  // ----- audio transmit/receive (v0.12) -----
+  $('btn-transmit-audio').addEventListener('click', handleTransmitAudio);
+  $('btn-receive-audio').addEventListener('click', openReceivePanel);
+  $('btn-cancel-receive').addEventListener('click', closeReceivePanel);
+  $('btn-start-receive').addEventListener('click', startAudioReceive);
+  $('btn-stop-receive').addEventListener('click', stopAudioReceive);
+  $('btn-retry-receive').addEventListener('click', startAudioReceive);
 
   // ----- label -----
   $('label-input').addEventListener('keydown', (e) => {

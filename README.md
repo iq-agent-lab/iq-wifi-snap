@@ -141,6 +141,7 @@ iq-wifi-snap/
     ├── env.js          브라우저/인앱/플랫폼 환경 감지
     ├── speedtest.js    Cloudflare speed test (다운로드/지연시간)
     ├── map.js          Leaflet + OpenStreetMap 지도 렌더
+    ├── audio.js        ggwave 오디오 송수신 (v0.12)
     └── storage.js      localStorage 래퍼
 ```
 
@@ -231,8 +232,8 @@ wifi-snap connect "Starbucks" "passw0rd"
 - [x] **v0.8** — 데스크톱 컴패니언 CLI. macOS/Linux/Windows에 한 줄 설치
 - [x] **v0.9** — 아이콘 재디자인(레퍼런스 앱 스타일), favicon 사이즈 확장, CLI 부트스트랩 정직 안내
 - [x] **v0.10** — 자동 속도 측정 (Cloudflare) + 카페별 지도 (Leaflet/OSM)
-- [x] **v0.11** — wifi-snap:// 커스텀 URL 스킴. 인스톨러가 OS에 핸들러 등록(macOS .app/Linux .desktop/Windows registry). 어디서든 링크 클릭만으로 CLI 자동 실행.
-- [ ] v0.12 — 초음파 오디오 전송 (ggwave, 진정한 연결 없는 폰→PC 전송)
+- [x] **v0.11** — wifi-snap:// 커스텀 URL 스킴. 인스톨러가 OS에 핸들러 등록
+- [x] **v0.12** — 초음파/오디오 전송 (ggwave). 인터넷·BT·페어링·QR 없이 폰 스피커 → PC 마이크로 와이파이 정보 전달. 진정한 무연결 폰→PC.
 
 ---
 

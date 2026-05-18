@@ -114,6 +114,7 @@
     <button id="btn-camera" class="primary">카메라 열기</button>
     <label class="secondary" for="file-input">파일 업로드</label>
     <input type="file" id="file-input" accept="image/*" hidden>
+    <button id="btn-receive-audio" class="secondary">🎧 소리로 받기 <span class="pill">PC 모드</span></button>
   </div>
 
   <div id="camera-section" hidden class="camera">
@@ -121,6 +122,44 @@
     <div class="cam-actions">
       <button id="btn-capture" class="primary">촬영</button>
       <button id="btn-cancel-camera">취소</button>
+    </div>
+  </div>
+
+  <!-- 오디오 수신 패널 (v0.12) -->
+  <div id="receive-section" hidden class="receive-panel">
+    <div class="receive-head">
+      <strong>🎧 소리로 받기 (PC 모드)</strong>
+      <button id="btn-cancel-receive" class="ghost-mini">닫기</button>
+    </div>
+    <p class="muted small">
+      PC 마이크로 폰의 소리를 수신합니다. 폰 결과 화면의 <strong>"🔊 PC로 소리 전송"</strong>
+      버튼을 PC 근처에서 눌러주세요.
+    </p>
+
+    <div id="receive-idle" class="receive-state">
+      <button id="btn-start-receive" class="primary">받기 시작</button>
+      <p class="muted small">처음 한 번 마이크 권한을 묻습니다.</p>
+    </div>
+
+    <div id="receive-listening" hidden class="receive-state">
+      <div class="mic-visual">
+        <div class="mic-icon">🎙</div>
+        <div class="mic-level"><div id="mic-level-fill"></div></div>
+      </div>
+      <p class="muted small mic-status">수신 대기 중... 폰에서 "PC로 소리 전송"을 눌러주세요.</p>
+      <button id="btn-stop-receive" class="ghost">중지</button>
+    </div>
+
+    <div id="receive-success" hidden class="receive-state ok-state">
+      <div class="success-icon">✓</div>
+      <p><strong>수신 완료!</strong></p>
+      <p class="muted small">잠시 후 결과 화면으로 이동합니다.</p>
+    </div>
+
+    <div id="receive-error" hidden class="receive-state error-state">
+      <strong>수신 실패</strong>
+      <p id="receive-error-msg"></p>
+      <button id="btn-retry-receive">다시 시도</button>
     </div>
   </div>
 
@@ -205,8 +244,21 @@
         <button id="btn-share-kakao" hidden>카톡</button>
         <button id="btn-share-link">링크 복사</button>
         <button id="btn-download-qr">QR 저장</button>
+        <button id="btn-transmit-audio" title="PC 마이크로 송신">🔊 소리로 전송</button>
       </div>
       <p id="share-feedback" hidden class="ok small"></p>
+      <div id="transmit-progress" hidden class="transmit-panel">
+        <div class="transmit-head">
+          <span>🔊 송신 중... PC 근처에서 마이크를 활성화하세요</span>
+          <button id="btn-stop-transmit" class="ghost-mini">중지</button>
+        </div>
+        <div class="transmit-bar">
+          <div id="transmit-bar-fill"></div>
+        </div>
+        <p class="muted small transmit-tip">
+          PC 측에서 Wifi Snap을 열고 <strong>"🎧 소리로 받기 (PC 모드)"</strong>를 먼저 활성화해야 합니다.
+        </p>
+      </div>
       <p class="captive-helper muted small">
         연결됐는데 인터넷이 안 되나요?
         <a href="http://neverssl.com" target="_blank" rel="noopener noreferrer">포털 페이지 열기 ↗</a>
@@ -472,7 +524,7 @@
 </main>
 
 <footer>
-  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.11.0</span></span>
+  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.12.0</span></span>
 </footer>
 
 <!-- ============== CUSTOM CONFIRM MODAL ============== -->
