@@ -1,5 +1,5 @@
 /* =====================================================
-   Wifi Snap · clean minimal · coral accent · v0.6
+   Wifi Snap · clean minimal · coral accent · v0.7
    ===================================================== */
 
 :root {
@@ -196,6 +196,65 @@ button.ghost-mini.regen:hover { background: var(--accent-soft); }
 .row {
   display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
   margin-top: 0.75rem;
+}
+
+/* ===== Banners (home onboarding) ===== */
+.banner {
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.5rem;
+  border: 1px solid;
+}
+.banner-warn {
+  background: #fdf6e3;
+  border-color: #ead9a8;
+  color: #5e4a16;
+}
+.banner-info {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: #5a2f1f;
+}
+.banner-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+.banner-icon { font-size: 1.1rem; }
+.banner-head strong { font-weight: 700; font-size: 0.95rem; }
+.banner p {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: 0.3rem 0;
+}
+.banner p em { font-style: italic; font-weight: 600; }
+.banner-actions {
+  display: flex; gap: 0.4rem; flex-wrap: wrap;
+  margin-top: 0.7rem;
+}
+.banner-actions button {
+  font-size: 0.85rem;
+  padding: 0.45rem 0.85rem;
+}
+.inapp-howto {
+  margin-top: 0.7rem !important;
+  padding: 0.6rem 0.85rem;
+  background: rgba(255,255,255,0.5);
+  border-radius: var(--radius);
+  line-height: 1.7 !important;
+}
+.inapp-howto kbd {
+  display: inline-block;
+  padding: 0.05em 0.4em;
+  background: white;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  margin: 0 0.1em;
+  color: var(--fg);
 }
 
 /* ===== Shared banner ===== */

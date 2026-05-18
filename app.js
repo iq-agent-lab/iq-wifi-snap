@@ -24,6 +24,7 @@ import {
 import { shareToKakao, looksLikeKakaoKey } from './lib/kakao.js';
 import { prepareOcr, runOcr, isOcrReady } from './lib/ocr.js';
 import { parseFromText } from './lib/parser.js';
+import { env, canDeepLinkOutOfInApp, openInExternalBrowser } from './lib/env.js';
 
 // ============ helpers ============
 const $ = (id) => document.getElementById(id);
@@ -40,16 +41,6 @@ let cameraStream = null;
 let installPromptEvent = null;
 let currentResultTs = null;
 let currentResult = null;
-
-// ============ env detection ============
-const env = {
-  isIOS:
-    /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
-  isAndroid: /Android/.test(navigator.userAgent),
-  isStandalone:
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true,
-};
 
 // ============ navigation ============
 function showView(name) {
@@ -782,6 +773,70 @@ function registerServiceWorker() {
     .catch((err) => console.warn('SW 등록 실패:', err.message));
 }
 
+// ============ banner setup ============
+
+const SESSION_DISMISS_INAPP = 'wifi-snap:dismissed-inapp';
+const SESSION_DISMISS_OCR = 'wifi-snap:dismissed-ocr-onboarding';
+
+function setupInAppWarning() {
+  const banner = document.getElementById('inapp-warning');
+  if (!env.isInAppBrowser) {
+    banner.hidden = true;
+    return;
+  }
+  if (sessionStorage.getItem(SESSION_DISMISS_INAPP) === '1') {
+    banner.hidden = true;
+    return;
+  }
+
+  document.getElementById('inapp-name').textContent = env.inApp.name;
+  banner.hidden = false;
+
+  const btnExt = document.getElementById('btn-open-external');
+  if (canDeepLinkOutOfInApp()) {
+    btnExt.hidden = false;
+    btnExt.addEventListener('click', () => {
+      if (!openInExternalBrowser()) {
+        alert('외부 브라우저 열기에 실패했습니다. 메뉴에서 수동으로 여세요.');
+      }
+    });
+  }
+
+  document.getElementById('btn-inapp-howto').addEventListener('click', () => {
+    const howto = document.getElementById('inapp-howto');
+    howto.hidden = !howto.hidden;
+  });
+
+  document.getElementById('btn-dismiss-inapp').addEventListener('click', () => {
+    sessionStorage.setItem(SESSION_DISMISS_INAPP, '1');
+    banner.hidden = true;
+  });
+}
+
+function setupOcrOnboarding() {
+  const banner = document.getElementById('ocr-onboarding');
+  // 이미 활성화돼있거나 무시 처리한 경우 안 보임
+  if (storage.isOcrEnabled() || sessionStorage.getItem(SESSION_DISMISS_OCR) === '1') {
+    banner.hidden = true;
+    return;
+  }
+  banner.hidden = false;
+
+  document.getElementById('btn-go-ocr').addEventListener('click', () => {
+    showView('settings');
+    // 잠깐 후 스크롤 (transition 끝난 뒤)
+    setTimeout(() => {
+      const el = document.getElementById('ocr-toggle').closest('.setting-block');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  });
+
+  document.getElementById('btn-dismiss-ocr').addEventListener('click', () => {
+    sessionStorage.setItem(SESSION_DISMISS_OCR, '1');
+    banner.hidden = true;
+  });
+}
+
 // ============ init ============
 function init() {
   // ----- nav -----
@@ -900,20 +955,65 @@ function init() {
     }
   });
 
-  // ----- settings: location toggle -----
+  // ----- settings: location toggle (개선됨 v0.7) -----
   $('loc-toggle').checked = storage.isLocationEnabled();
   $('loc-toggle').addEventListener('change', async (e) => {
-    if (e.target.checked) {
+    if (!e.target.checked) {
+      storage.setLocationEnabled(false);
+      return;
+    }
+
+    // 1) 권한 상태 먼저 확인
+    let permState = 'prompt';
+    if (navigator.permissions && navigator.permissions.query) {
       try {
-        await getCurrentPosition({ timeout: 5000 });
-        storage.setLocationEnabled(true);
-      } catch (err) {
-        alert('위치 권한이 거부됐거나 가져오지 못했습니다: ' + err.message);
+        const status = await navigator.permissions.query({ name: 'geolocation' });
+        permState = status.state;
+      } catch {
+        /* unsupported */
+      }
+    }
+
+    if (permState === 'denied') {
+      alert(
+        '위치 권한이 차단되어 있습니다.\n' +
+          '주소창의 사이트 정보 → 권한 → "위치"를 "허용"으로 바꾸고 다시 시도해주세요.'
+      );
+      e.target.checked = false;
+      storage.setLocationEnabled(false);
+      return;
+    }
+
+    // 2) 실제로 위치 가져와보기 (긴 타임아웃)
+    try {
+      await getCurrentPosition({ timeout: 15000, maxAge: 60000 });
+      storage.setLocationEnabled(true);
+    } catch (err) {
+      // GeolocationPositionError.code: 1=denied, 2=unavailable, 3=timeout
+      const isDenied = err.code === 1 || /denied|permission/i.test(err.message);
+      const isTimeout = err.code === 3 || /timeout/i.test(err.message);
+
+      if (isDenied) {
+        alert('위치 권한이 거부되었습니다: ' + err.message);
+        e.target.checked = false;
+        storage.setLocationEnabled(false);
+      } else if (isTimeout) {
+        // 권한은 OK인데 GPS가 늦게 잡힘 — 사용자가 선택
+        const ok = confirm(
+          'GPS 자리잡는 데 시간이 걸리네요. 권한은 허용된 것 같으니 일단 활성화할까요?\n' +
+            '(이후 사용 시 GPS가 자리잡으면 자동 동작합니다)'
+        );
+        if (ok) {
+          storage.setLocationEnabled(true);
+        } else {
+          e.target.checked = false;
+          storage.setLocationEnabled(false);
+        }
+      } else {
+        alert('위치 가져오기 실패: ' + err.message);
         e.target.checked = false;
         storage.setLocationEnabled(false);
       }
-    } else {
-      storage.setLocationEnabled(false);
     }
   });
 
@@ -1021,6 +1121,8 @@ function init() {
 
   renderHistory();
   setupInstallExperience();
+  setupInAppWarning();
+  setupOcrOnboarding();
   updateCameraStatus();
   registerServiceWorker();
 

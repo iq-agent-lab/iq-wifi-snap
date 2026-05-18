@@ -4,7 +4,7 @@
 //   - 외부 CDN (fonts, qrcode): cache-first
 //   - Anthropic API: network-only (캐시 절대 안 함)
 
-const CACHE = 'iq-wifi-snap-v0.6.0';
+const CACHE = 'iq-wifi-snap-v0.7.0';
 
 const SHELL = [
   './',
@@ -20,9 +20,12 @@ const SHELL = [
   './lib/kakao.js',
   './lib/ocr.js',
   './lib/parser.js',
+  './lib/env.js',
+  './icons/icon-152.png',
+  './icons/icon-167.png',
+  './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/icon-180.png',
 ];
 
 self.addEventListener('install', (e) => {

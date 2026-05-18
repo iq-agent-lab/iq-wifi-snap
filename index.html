@@ -17,7 +17,10 @@
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+<link rel="apple-touch-icon-precomposed" href="icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Wifi Snap">
@@ -53,6 +56,37 @@
 
 <!-- ============== HOME ============== -->
 <section data-view="home">
+  <!-- 인앱 브라우저 경고 -->
+  <div id="inapp-warning" class="banner banner-warn" hidden>
+    <div class="banner-head">
+      <span class="banner-icon">⚠</span>
+      <strong><span id="inapp-name"></span> 인앱 브라우저</strong>
+    </div>
+    <p>인앱 브라우저에서는 카메라/위치 권한이 매번 다시 묻거나 작동하지 않을 수 있어요.</p>
+    <div class="banner-actions">
+      <button id="btn-open-external" class="primary" hidden>외부 브라우저로 열기</button>
+      <button id="btn-inapp-howto" class="secondary">여는 방법</button>
+      <button id="btn-dismiss-inapp" class="ghost-mini">이번 세션 무시</button>
+    </div>
+    <p id="inapp-howto" hidden class="inapp-howto small">
+      <strong>iOS</strong>: 우측 상단 <kbd>⋯</kbd> 또는 <kbd>↗</kbd> 메뉴 → "Safari로 열기" / "다른 브라우저로 열기"<br>
+      <strong>Android</strong>: 우측 상단 <kbd>⋯</kbd> 메뉴 → "다른 브라우저로 열기" 또는 "Chrome으로 열기"
+    </p>
+  </div>
+
+  <!-- 오프라인 OCR 안내 (활성화 안 했을 때만) -->
+  <div id="ocr-onboarding" class="banner banner-info" hidden>
+    <div class="banner-head">
+      <span class="banner-icon">📡</span>
+      <strong>오프라인 모드 준비</strong>
+    </div>
+    <p>와이파이 연결 <em>전</em>엔 인터넷이 없어서 Claude API 호출이 안 돼요. 카페에 가기 전 미리 OCR 모델을 받아두면 오프라인에서도 추출됩니다.</p>
+    <div class="banner-actions">
+      <button id="btn-go-ocr" class="primary">설정에서 준비</button>
+      <button id="btn-dismiss-ocr" class="ghost-mini">나중에</button>
+    </div>
+  </div>
+
   <h1 class="hero">사진 한 장으로<br><span class="accent">와이파이 끝.</span></h1>
   <p class="muted lead">카페 와이파이 정보를 찍으면 SSID 추출 · QR 생성 · 데스크톱 명령어까지 한 번에.</p>
 
@@ -311,7 +345,7 @@
 </main>
 
 <footer>
-  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.6.0</span></span>
+  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.7.0</span></span>
 </footer>
 
 <!-- ============== CUSTOM CONFIRM MODAL ============== -->
