@@ -139,6 +139,7 @@
 
     <div class="meta">
       <span id="out-conf-wrap">신뢰도 <strong id="out-conf"></strong></span>
+      <span id="out-engine" class="muted" hidden></span>
       <span id="out-notes" class="muted"></span>
       <span id="out-location" class="muted" hidden></span>
       <button id="btn-regen-qr" class="ghost-mini regen" hidden title="수정 후 QR 다시 만들기">
@@ -266,6 +267,26 @@
   </div>
 
   <div class="setting-block">
+    <h3>오프라인 OCR (Tesseract)</h3>
+    <label class="toggle">
+      <input type="checkbox" id="ocr-toggle">
+      <span>인터넷 없을 때도 추출 (오프라인 폴백)</span>
+    </label>
+    <p class="muted small">
+      Claude API 호출이 실패하면 자동으로 브라우저 안의 Tesseract OCR + 로컬 파서로 전환합니다.
+      API 키가 없어도 추출 가능. 단, Claude보다 정확도는 낮으므로 결과를 확인 후 직접 수정이 필요할 수 있어요.<br><br>
+      <strong>중요:</strong> 카페에 가기 <em>전</em>에 인터넷 있는 곳에서 한 번 모델을 다운받아 두세요.
+      한 번 받으면 브라우저에 영구 저장되어 이후엔 오프라인에서 작동합니다.
+    </p>
+    <div id="ocr-preload-group" hidden>
+      <div class="row">
+        <button id="btn-preload-ocr" class="primary">오프라인 데이터 다운로드</button>
+      </div>
+      <div id="ocr-status" class="install-status" hidden></div>
+    </div>
+  </div>
+
+  <div class="setting-block">
     <h3>네트워크 인터페이스 (macOS)</h3>
     <div class="field">
       <input type="text" id="iface-input" placeholder="en0">
@@ -290,7 +311,7 @@
 </main>
 
 <footer>
-  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.5.0</span></span>
+  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.6.0</span></span>
 </footer>
 
 <!-- ============== CUSTOM CONFIRM MODAL ============== -->

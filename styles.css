@@ -1,5 +1,5 @@
 /* =====================================================
-   Wifi Snap · clean minimal · coral accent · v0.5
+   Wifi Snap · clean minimal · coral accent · v0.6
    ===================================================== */
 
 :root {
@@ -370,6 +370,23 @@ button.ghost-mini.regen:hover { background: var(--accent-soft); }
   padding: 0.25rem 0;
 }
 .meta strong { color: var(--fg); font-weight: 500; }
+
+/* engine indicator */
+#out-engine.engine-ocr {
+  color: var(--warn);
+  font-weight: 500;
+}
+
+/* ocr preload group */
+#ocr-preload-group {
+  margin-top: 0.75rem;
+}
+#ocr-preload-group .row {
+  margin-top: 0;
+}
+#ocr-status {
+  margin-top: 0.6rem;
+}
 
 /* ===== Label input ===== */
 .label-block {

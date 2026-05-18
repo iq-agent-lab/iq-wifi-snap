@@ -133,6 +133,8 @@ iq-wifi-snap/
     ├── location.js     GPS + Haversine 거리
     ├── share.js        공유 URL + Web Share API + QR PNG
     ├── kakao.js        Kakao JS SDK 동적 로딩 + 공유
+    ├── ocr.js          Tesseract.js 동적 로딩 + 워커 관리
+    ├── parser.js       OCR 텍스트 → SSID/PW 로컬 파서
     └── storage.js      localStorage 래퍼
 ```
 
@@ -186,7 +188,7 @@ base64 안에 SSID/PW/security만 들어있어서 받는 사람 데이터로는 
 - [x] **v0.3.1** — 테스트 예시 이미지 추가 (examples/)
 - [x] **v0.4** — 브랜드 리디자인 (Wifi Snap), 새 로고, 커스텀 삭제 확인, 카메라 권한 상태 표시, PWA 설치 흐름 개선
 - [x] **v0.5** — 🐛 [hidden] CSS 충돌 버그 픽스, 카카오톡 직접 공유 (Kakao SDK), 캡티브 포털 보조 링크
-- [ ] v0.6 — 온디바이스 OCR 폴백 (Tesseract.js · 오프라인 상황)
+- [x] **v0.6** — 온디바이스 OCR 폴백 (Tesseract.js + 로컬 파서). 인터넷 없이도 추출 가능. Claude 실패 시 자동 폴백.
 - [ ] v0.7 — 데스크톱 컴패니언 (WebSocket · 페어링)
 - [ ] v0.8 — 자동 속도 측정, 카페별 평균 속도 지도
 

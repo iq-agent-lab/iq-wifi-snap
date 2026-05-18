@@ -22,6 +22,8 @@ import {
   buildShareText,
 } from './lib/share.js';
 import { shareToKakao, looksLikeKakaoKey } from './lib/kakao.js';
+import { prepareOcr, runOcr, isOcrReady } from './lib/ocr.js';
+import { parseFromText } from './lib/parser.js';
 
 // ============ helpers ============
 const $ = (id) => document.getElementById(id);
@@ -162,6 +164,22 @@ function captureFrame() {
   return canvas.toDataURL('image/jpeg', 0.88);
 }
 
+function updateOcrUi() {
+  const enabled = storage.isOcrEnabled();
+  $('ocr-toggle').checked = enabled;
+  $('ocr-preload-group').hidden = !enabled;
+  const ready = isOcrReady();
+  const btn = $('btn-preload-ocr');
+  btn.textContent = ready ? '재준비' : '오프라인 데이터 다운로드';
+  const status = $('ocr-status');
+  if (ready) {
+    status.hidden = false;
+    status.textContent = '✓ 준비 완료. 오프라인에서 추출 가능.';
+    status.classList.add('granted');
+    status.classList.remove('denied');
+  }
+}
+
 async function updateCameraStatus() {
   const el = $('camera-status');
   if (!el) return;
@@ -185,14 +203,14 @@ async function updateCameraStatus() {
 }
 
 // ============ processing ============
-async function processImage(dataUrl) {
-  const apiKey = storage.getApiKey();
-  if (!apiKey) {
-    alert('먼저 설정에서 Anthropic API 키를 등록하세요.');
-    showView('settings');
-    return;
-  }
 
+/**
+ * 추출 시도. mode: 'auto' | 'claude' | 'ocr'.
+ * 'auto': Claude 먼저 시도, 네트워크 실패면 OCR로 폴백.
+ * 'claude': Claude만.
+ * 'ocr': OCR만 (오프라인 강제).
+ */
+async function processImage(dataUrl, mode = 'auto') {
   $('result-loading').hidden = false;
   $('result-data').hidden = true;
   $('result-error').hidden = true;
@@ -206,41 +224,120 @@ async function processImage(dataUrl) {
   }
   const [, mediaType, base64] = m;
 
+  // 위치는 항상 병렬로
   const locationPromise = storage.isLocationEnabled()
     ? getCurrentPosition().catch(() => null)
     : Promise.resolve(null);
 
-  try {
-    const result = await extractWifi({
-      apiKey,
-      model: storage.getModel(),
-      base64,
-      mediaType,
-    });
-    if (!result.ssid) {
-      throw new Error(
-        '이미지에서 SSID를 찾지 못했습니다. 더 선명한 사진으로 다시 시도해주세요.'
+  const apiKey = storage.getApiKey();
+  const ocrEnabled = storage.isOcrEnabled();
+
+  // mode auto에서 Claude를 시도할지 결정
+  const tryClaude = (mode === 'auto' || mode === 'claude') && apiKey;
+  const allowOcrFallback = mode !== 'claude' && ocrEnabled;
+
+  let result = null;
+  let engine = null;
+  let claudeError = null;
+
+  // 1) Claude Vision 시도
+  if (tryClaude) {
+    try {
+      setLoadingMessage('Claude Vision으로 추출 중...');
+      result = await extractWifi({
+        apiKey,
+        model: storage.getModel(),
+        base64,
+        mediaType,
+      });
+      if (!result.ssid) {
+        throw new Error('SSID를 찾지 못했습니다');
+      }
+      engine = 'claude';
+    } catch (e) {
+      claudeError = e;
+      // 네트워크 에러 또는 OCR 폴백 허용된 경우만 폴백
+      const isNetwork = /failed to fetch|networkerror|load failed/i.test(
+        e.message
+      );
+      if (!allowOcrFallback) {
+        showError(e.message);
+        return;
+      }
+      // 폴백
+      setLoadingMessage(
+        isNetwork
+          ? '인터넷이 없어요. 오프라인 OCR로 전환합니다...'
+          : 'Claude 추출이 실패해서 오프라인 OCR로 전환합니다...'
       );
     }
-
-    const location = await locationPromise;
-    const saved = storage.addHistory({
-      ssid: result.ssid,
-      password: result.password,
-      security: result.security,
-      location,
-    });
-    currentResultTs = saved.ts;
-
-    renderResult({
-      ...result,
-      location: saved.location,
-      label: saved.label,
-      _shared: false,
-    });
-  } catch (e) {
-    showError(e.message);
   }
+
+  // 2) OCR 폴백 또는 직접
+  if (!result) {
+    if (!ocrEnabled && !apiKey) {
+      showError(
+        'API 키가 없고 오프라인 OCR도 비활성화되어 있습니다.\n설정에서 둘 중 하나를 활성화해주세요.'
+      );
+      return;
+    }
+    if (!ocrEnabled) {
+      showError(
+        '오프라인 OCR이 활성화되지 않았습니다.\n설정 → "오프라인 OCR"에서 활성화하세요.'
+      );
+      return;
+    }
+
+    try {
+      setLoadingMessage('오프라인 OCR 준비 중...');
+      const rawText = await runOcr(dataUrl, (m) => {
+        if (m.status === 'recognizing text') {
+          setLoadingMessage(
+            `오프라인 OCR 인식 중... ${Math.round((m.progress || 0) * 100)}%`
+          );
+        } else if (m.status) {
+          setLoadingMessage(`오프라인 OCR: ${m.status}...`);
+        }
+      });
+      result = parseFromText(rawText);
+      if (!result.ssid) {
+        throw new Error(
+          'OCR이 SSID 라벨을 찾지 못했습니다. 사진을 더 선명하게 찍거나 직접 입력해주세요.'
+        );
+      }
+      engine = 'ocr';
+    } catch (e) {
+      const combined = claudeError
+        ? `Claude: ${claudeError.message}\nOCR: ${e.message}`
+        : e.message;
+      showError(combined);
+      return;
+    }
+  }
+
+  // 저장 + 렌더
+  const location = await locationPromise;
+  const saved = storage.addHistory({
+    ssid: result.ssid,
+    password: result.password,
+    security: result.security,
+    location,
+  });
+  currentResultTs = saved.ts;
+
+  renderResult({
+    ...result,
+    location: saved.location,
+    label: saved.label,
+    _shared: false,
+    _engine: engine,
+  });
+}
+
+function setLoadingMessage(msg) {
+  const el = $('result-loading');
+  if (!el) return;
+  el.innerHTML = `<span class="spin"></span> ${msg}`;
 }
 
 function showError(msg) {
@@ -263,10 +360,22 @@ function renderResult(r) {
   if (r._shared) {
     $('out-conf-wrap').hidden = true;
     $('out-notes').textContent = '';
+    $('out-engine').hidden = true;
   } else {
     $('out-conf-wrap').hidden = false;
     $('out-conf').textContent = CONF_LABEL[r.confidence] || r.confidence || '-';
     $('out-notes').textContent = r.notes ? `· ${r.notes}` : '';
+    const eng = $('out-engine');
+    if (r._engine) {
+      eng.hidden = false;
+      eng.textContent =
+        r._engine === 'claude'
+          ? '· 엔진 Claude Vision'
+          : '· 엔진 Tesseract (오프라인)';
+      eng.classList.toggle('engine-ocr', r._engine === 'ocr');
+    } else {
+      eng.hidden = true;
+    }
   }
 
   const locEl = $('out-location');
@@ -808,6 +917,36 @@ function init() {
     }
   });
 
+  // ----- settings: offline OCR -----
+  updateOcrUi();
+  $('ocr-toggle').addEventListener('change', (e) => {
+    storage.setOcrEnabled(e.target.checked);
+    updateOcrUi();
+  });
+  $('btn-preload-ocr').addEventListener('click', async () => {
+    const btn = $('btn-preload-ocr');
+    const status = $('ocr-status');
+    btn.disabled = true;
+    status.hidden = false;
+    status.textContent = '준비 중... (한국어 모델 약 8MB, 영문 약 4MB)';
+    status.classList.remove('granted', 'denied');
+    try {
+      await prepareOcr((m) => {
+        const pct = Math.round((m.progress || 0) * 100);
+        const stage = m.status || 'loading';
+        status.textContent = `${stage} ${pct}%`;
+      });
+      status.textContent = '✓ 준비 완료. 오프라인에서 추출 가능.';
+      status.classList.add('granted');
+      btn.textContent = '재준비';
+    } catch (e) {
+      status.textContent = '✗ 다운로드 실패: ' + e.message;
+      status.classList.add('denied');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   // ----- settings: iface -----
   $('iface-input').value = storage.getIface();
   $('iface-input').addEventListener('change', (e) => {
@@ -891,11 +1030,11 @@ function init() {
     showView('home');
     refreshNearby();
 
-    if (!storage.getApiKey()) {
+    if (!storage.getApiKey() && !storage.isOcrEnabled()) {
       setTimeout(() => {
         if (
           confirm(
-            'Anthropic API 키가 설정되지 않았습니다. 지금 설정으로 이동할까요?'
+            'API 키도 오프라인 OCR도 설정되지 않았습니다.\n지금 설정으로 이동할까요? 둘 중 하나만 활성화하면 추출이 가능합니다.'
           )
         ) {
           showView('settings');
