@@ -3,9 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#fafaf7">
+<meta name="theme-color" content="#cc785c">
 <title>iq-wifi-snap</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23cc785c'/%3E%3Ctext x='50%25' y='58%25' font-family='monospace' font-size='18' font-weight='700' text-anchor='middle' fill='%23fafaf7'%3Ew%3C/text%3E%3C/svg%3E">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="wifi-snap">
+<meta name="mobile-web-app-capable" content="yes">
+
 <link rel="stylesheet" href="styles.css">
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,6 +42,15 @@
 <section data-view="home">
   <h1 class="hero">사진 한 장으로<br><span class="accent">와이파이 끝.</span></h1>
   <p class="muted lead">카페 와이파이 정보를 찍으면 SSID 추출 · QR 생성 · 데스크톱 명령어까지 한 번에.</p>
+
+  <!-- 근처 카페 (위치 기반 자동 복원) -->
+  <div id="nearby-section" hidden class="nearby">
+    <div class="nearby-header">
+      <span class="nearby-label">근처에서 사용했던 와이파이</span>
+      <button id="btn-refresh-nearby" class="ghost-mini" title="다시 찾기">↻</button>
+    </div>
+    <div id="nearby-list"></div>
+  </div>
 
   <div class="actions">
     <button id="btn-camera" class="primary">카메라 열기</button>
@@ -103,6 +121,13 @@
     <div class="meta">
       <span>신뢰도 <strong id="out-conf"></strong></span>
       <span id="out-notes" class="muted"></span>
+      <span id="out-location" class="muted" hidden></span>
+    </div>
+
+    <!-- 라벨 입력 (이 자리에 카페 이름 적기) -->
+    <div class="label-block">
+      <input type="text" id="label-input" placeholder="카페 이름 (선택, Enter로 저장)" maxlength="40">
+      <span id="label-saved" hidden class="ok small">저장됨</span>
     </div>
 
     <div class="qr-block">
@@ -178,18 +203,33 @@
   </div>
 
   <div class="setting-block">
+    <h3>위치 기억</h3>
+    <label class="toggle">
+      <input type="checkbox" id="loc-toggle">
+      <span>GPS 위치 같이 저장 (재방문 시 자동 복원)</span>
+    </label>
+    <p class="muted small">추출할 때 현재 위치(좌표)를 함께 저장합니다. 다음에 같은 카페에 오면 사진 없이 자동으로 와이파이 정보가 떠요. 위치는 이 브라우저에만 저장됩니다.</p>
+  </div>
+
+  <div class="setting-block">
     <h3>네트워크 인터페이스 (macOS)</h3>
     <div class="field">
       <input type="text" id="iface-input" placeholder="en0">
     </div>
     <p class="muted small">기본 <code>en0</code>. M1/M2 Mac에서 dock 사용 시 <code>en7</code> 등일 수 있음.</p>
   </div>
+
+  <div class="setting-block">
+    <h3>앱 설치</h3>
+    <button id="btn-install" class="primary" hidden>홈 화면에 추가</button>
+    <p id="install-hint" class="muted small">iOS Safari에서는 공유 버튼 → "홈 화면에 추가". Android Chrome은 메뉴 → "앱 설치".</p>
+  </div>
 </section>
 
 </main>
 
 <footer>
-  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a></span>
+  <span class="muted small">made by IQ · <a href="https://github.com/iq-agent-lab/iq-wifi-snap" target="_blank" rel="noopener">iq-agent-lab/iq-wifi-snap</a> · <span id="version">v0.2.0</span></span>
 </footer>
 
 <script type="module" src="app.js"></script>

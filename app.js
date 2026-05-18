@@ -1,5 +1,5 @@
-// app.js
-// Main app: camera, file upload, processing, result rendering, history
+// app.js v0.2
+// 진입점: 카메라 / 업로드 / 위치 기반 자동 복원 / PWA 설치
 
 import { extractWifi } from './lib/claude.js';
 import {
@@ -9,6 +9,11 @@ import {
   windowsCommand,
 } from './lib/wifi.js';
 import { storage } from './lib/storage.js';
+import {
+  getCurrentPosition,
+  findNearby,
+  formatDistance,
+} from './lib/location.js';
 
 // ============ helpers ============
 const $ = (id) => document.getElementById(id);
@@ -24,6 +29,8 @@ const escapeHtml = (s) =>
 const CONF_LABEL = { high: '높음', medium: '중간', low: '낮음' };
 
 let cameraStream = null;
+let installPromptEvent = null;
+let currentResultTs = null; // 현재 화면에 떠 있는 결과의 history ts
 
 // ============ navigation ============
 function showView(name) {
@@ -89,6 +96,11 @@ async function processImage(dataUrl) {
   }
   const [, mediaType, base64] = m;
 
+  // 위치는 추출과 병렬로 (실패해도 추출은 계속)
+  const locationPromise = storage.isLocationEnabled()
+    ? getCurrentPosition().catch(() => null)
+    : Promise.resolve(null);
+
   try {
     const result = await extractWifi({
       apiKey,
@@ -101,12 +113,17 @@ async function processImage(dataUrl) {
         '이미지에서 SSID를 찾지 못했습니다. 더 선명한 사진으로 다시 시도해주세요.'
       );
     }
-    renderResult(result);
-    storage.addHistory({
+
+    const location = await locationPromise;
+    const saved = storage.addHistory({
       ssid: result.ssid,
       password: result.password,
       security: result.security,
+      location,
     });
+    currentResultTs = saved.ts;
+
+    renderResult({ ...result, location: saved.location, label: saved.label });
   } catch (e) {
     showError(e.message);
   }
@@ -127,6 +144,18 @@ function renderResult(r) {
   $('out-pass').textContent = r.password || '(비밀번호 없음)';
   $('out-conf').textContent = CONF_LABEL[r.confidence] || r.confidence;
   $('out-notes').textContent = r.notes ? `· ${r.notes}` : '';
+
+  const locEl = $('out-location');
+  if (r.location) {
+    locEl.textContent = `· 위치 저장됨`;
+    locEl.hidden = false;
+  } else {
+    locEl.hidden = true;
+  }
+
+  // 라벨 입력 초기화
+  $('label-input').value = r.label || '';
+  $('label-saved').hidden = true;
 
   // QR
   const qrStr = wifiQRString(r);
@@ -149,6 +178,56 @@ function renderResult(r) {
   $('cmd-windows').textContent = windowsCommand(r);
 }
 
+// ============ nearby (location-based recall) ============
+async function refreshNearby() {
+  const section = $('nearby-section');
+  const list = $('nearby-list');
+
+  if (!storage.isLocationEnabled()) {
+    section.hidden = true;
+    return;
+  }
+
+  const history = storage.getHistory();
+  const withLoc = history.filter((e) => e.location);
+  if (withLoc.length === 0) {
+    section.hidden = true;
+    return;
+  }
+
+  try {
+    const pos = await getCurrentPosition({ timeout: 5000, maxAge: 60000 });
+    const nearby = findNearby(pos, withLoc, 100); // 100m 이내
+
+    if (nearby.length === 0) {
+      section.hidden = true;
+      return;
+    }
+
+    list.innerHTML = nearby
+      .slice(0, 3)
+      .map(
+        ({ entry, dist }) => `
+      <button class="nearby-item" data-action="reuse-nearby" data-ts="${entry.ts}">
+        <div class="nearby-info">
+          <div class="nearby-name">${escapeHtml(entry.label || entry.ssid)}</div>
+          <div class="nearby-sub">
+            ${entry.label ? `<span class="mono">${escapeHtml(entry.ssid)}</span> · ` : ''}
+            <span>${formatDistance(dist)}</span>
+          </div>
+        </div>
+        <span class="nearby-arrow">→</span>
+      </button>
+    `
+      )
+      .join('');
+    section.hidden = false;
+  } catch (e) {
+    // 위치 실패 시 조용히 숨김 (홈 화면 깔끔하게)
+    section.hidden = true;
+  }
+}
+
 // ============ history ============
 function renderHistory() {
   const list = storage.getHistory();
@@ -167,10 +246,18 @@ function renderHistory() {
     .map(
       (e) => `
     <div class="history-item">
-      <div>
+      <div class="h-info">
+        ${
+          e.label
+            ? `<div class="h-label">${escapeHtml(e.label)}</div>`
+            : ''
+        }
         <div class="h-ssid">${escapeHtml(e.ssid)}</div>
         <div class="h-pass">${escapeHtml(e.password || '(없음)')}</div>
-        <div class="h-ts">${new Date(e.ts).toLocaleString('ko-KR')}</div>
+        <div class="h-meta">
+          ${new Date(e.ts).toLocaleString('ko-KR')}
+          ${e.location ? '<span class="h-loc-pin">📍</span>' : ''}
+        </div>
       </div>
       <div class="h-actions">
         <button data-action="copy-pass" data-ts="${e.ts}">PW 복사</button>
@@ -183,6 +270,55 @@ function renderHistory() {
     .join('');
 }
 
+function reuseEntry(ts) {
+  const item = storage.getHistory().find((x) => x.ts === ts);
+  if (!item) return;
+  currentResultTs = ts;
+  renderResult({
+    ssid: item.ssid,
+    password: item.password,
+    security: item.security,
+    confidence: 'high',
+    notes: '기록에서 복원',
+    location: item.location,
+    label: item.label,
+  });
+  showView('result');
+}
+
+// ============ PWA install ============
+function setupInstallPrompt() {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installPromptEvent = e;
+    const btn = $('btn-install');
+    btn.hidden = false;
+    btn.addEventListener('click', async () => {
+      if (!installPromptEvent) return;
+      installPromptEvent.prompt();
+      const choice = await installPromptEvent.userChoice;
+      if (choice.outcome === 'accepted') {
+        btn.hidden = true;
+        $('install-hint').textContent = '설치되었습니다.';
+      }
+      installPromptEvent = null;
+    });
+  });
+
+  window.addEventListener('appinstalled', () => {
+    $('btn-install').hidden = true;
+    $('install-hint').textContent = '설치되었습니다.';
+  });
+}
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  // file:// 또는 비-HTTPS에서는 SW 등록 실패하므로 무시
+  navigator.serviceWorker
+    .register('sw.js')
+    .catch((err) => console.warn('SW 등록 실패:', err.message));
+}
+
 // ============ init ============
 function init() {
   // ----- nav -----
@@ -190,6 +326,7 @@ function init() {
     b.addEventListener('click', () => {
       const target = b.dataset.nav;
       if (target === 'history') renderHistory();
+      if (target === 'home') refreshNearby();
       showView(target);
       stopCamera();
       $('camera-section').hidden = true;
@@ -217,8 +354,20 @@ function init() {
     reader.onload = () => processImage(reader.result);
     reader.onerror = () => alert('파일 읽기 실패');
     reader.readAsDataURL(f);
-    // reset for re-selecting same file
     e.target.value = '';
+  });
+
+  // ----- nearby refresh -----
+  $('btn-refresh-nearby').addEventListener('click', refreshNearby);
+
+  // ----- label input (Enter to save) -----
+  $('label-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && currentResultTs) {
+      const v = e.target.value.trim();
+      storage.updateHistory(currentResultTs, { label: v || null });
+      $('label-saved').hidden = false;
+      setTimeout(() => ($('label-saved').hidden = true), 1500);
+    }
   });
 
   // ----- settings: API key -----
@@ -242,6 +391,28 @@ function init() {
     storage.setModel(e.target.value);
   });
 
+  // ----- settings: location toggle -----
+  $('loc-toggle').checked = storage.isLocationEnabled();
+  $('loc-toggle').addEventListener('change', async (e) => {
+    if (e.target.checked) {
+      // 토글 켤 때 권한 미리 요청 (UX: 카페에서 처음 켤 때 권한 알람 안 뜨고 부드럽게)
+      try {
+        await getCurrentPosition({ timeout: 5000 });
+        storage.setLocationEnabled(true);
+      } catch (err) {
+        alert(
+          '위치 권한이 거부됐거나 가져오지 못했습니다: ' +
+            err.message +
+            '\n브라우저 설정에서 위치 권한을 허용해주세요.'
+        );
+        e.target.checked = false;
+        storage.setLocationEnabled(false);
+      }
+    } else {
+      storage.setLocationEnabled(false);
+    }
+  });
+
   // ----- settings: iface -----
   $('iface-input').value = storage.getIface();
   $('iface-input').addEventListener('change', (e) => {
@@ -250,18 +421,22 @@ function init() {
 
   // ----- copy buttons (delegated) -----
   document.body.addEventListener('click', (e) => {
-    const t = e.target;
+    const t = e.target.closest('[data-copy], [data-action]');
+    if (!t) return;
 
-    if (t.matches('[data-copy]')) {
+    if (t.dataset.copy) {
       const target = $(t.dataset.copy);
       navigator.clipboard.writeText(target.textContent);
       const old = t.textContent;
       t.textContent = '복사됨';
       setTimeout(() => (t.textContent = old), 1200);
+      return;
     }
 
-    if (t.matches('[data-action="copy-pass"]')) {
-      const ts = +t.dataset.ts;
+    const action = t.dataset.action;
+    const ts = +t.dataset.ts;
+
+    if (action === 'copy-pass') {
       const item = storage.getHistory().find((x) => x.ts === ts);
       if (item) {
         navigator.clipboard.writeText(item.password);
@@ -269,24 +444,11 @@ function init() {
         t.textContent = '복사됨';
         setTimeout(() => (t.textContent = old), 1200);
       }
-    }
-
-    if (t.matches('[data-action="delete"]')) {
-      storage.removeHistory(+t.dataset.ts);
+    } else if (action === 'delete') {
+      storage.removeHistory(ts);
       renderHistory();
-    }
-
-    if (t.matches('[data-action="reuse"]')) {
-      const ts = +t.dataset.ts;
-      const item = storage.getHistory().find((x) => x.ts === ts);
-      if (item) {
-        renderResult({
-          ...item,
-          confidence: 'high',
-          notes: '기록에서 복원',
-        });
-        showView('result');
-      }
+    } else if (action === 'reuse' || action === 'reuse-nearby') {
+      reuseEntry(ts);
     }
   });
 
@@ -300,6 +462,9 @@ function init() {
 
   renderHistory();
   showView('home');
+  refreshNearby();
+  setupInstallPrompt();
+  registerServiceWorker();
 
   // ----- first-run nudge -----
   if (!storage.getApiKey()) {
